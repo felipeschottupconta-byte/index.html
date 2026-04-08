@@ -642,7 +642,6 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; 
 
 <div class="toast" id="toast"></div>
 
-<script>
 // ═══ PDF.JS SETUP ═══
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -664,7 +663,6 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','A
 let currentMonth = new Date().getMonth();
 let currentYear  = new Date().getFullYear();
 
-// ═══ STATE ═══
 // ═══ FIREBASE SETUP E STATE ═══
 const firebaseConfig = {
   apiKey: "AIzaSyBqdiSPQBn8H283_aNv7s7qjuqU-OgpYXs",
@@ -680,66 +678,47 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-const DEFAULT_STATE = {
-  casal: { nome1: 'Felipe', nome2: 'Ana' },
-  pessoas: {
-    a: { entradas: [
-      { id: 'e_a1', desc: 'Salário', value: 0 },
-      { id: 'e_a2', desc: 'Vale Alimentação', value: 0 },
-      { id: 'e_a3', desc: 'Vale Transporte', value: 0 },
-    ]},
-    b: { entradas: [
-      { id: 'e_b1', desc: 'Salário', value: 0 },
-      { id: 'e_b2', desc: 'Vale Alimentação', value: 0 },
-      { id: 'e_b3', desc: 'Vale Transporte', value: 0 },
-    ]}
-  },
-  fixas: [
-    { id: 'fix_1', desc: 'Financiamento Apartamento', value: 1290, cat: 'moradia', ativa: true },
-    { id: 'fix_2', desc: 'Consórcio', value: 410, cat: 'moradia', ativa: true },
-    { id: 'fix_3', desc: 'Faculdade', value: 0, cat: 'educacao', ativa: true },
-  ],
-  expenses: [],
-  cartoes: [],
-  contas: [],
-  activeFilter: 'all',
-  selectedCardId: null,
-  selectedCardColor: 0
-};
+// BLINDAGEM: Garante que nunca vai faltar uma tabela por causa do Firebase
+function sanitizeState(s) {
+  if (!s) s = {};
+  return {
+    casal: s.casal || { nome1: 'Felipe', nome2: 'Ana' },
+    pessoas: {
+      a: { entradas: (s.pessoas && s.pessoas.a && s.pessoas.a.entradas) ? s.pessoas.a.entradas : [] },
+      b: { entradas: (s.pessoas && s.pessoas.b && s.pessoas.b.entradas) ? s.pessoas.b.entradas : [] }
+    },
+    fixas: s.fixas || [],
+    expenses: s.expenses || [],
+    cartoes: s.cartoes || [],
+    contas: s.contas || [],
+    activeFilter: s.activeFilter || 'all',
+    selectedCardId: s.selectedCardId || null,
+    selectedCardColor: s.selectedCardColor || 0
+  };
+}
+
+const DEFAULT_STATE = sanitizeState(null);
 
 function loadState() {
   try {
     const s = localStorage.getItem('financasCasal_v4');
-    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_STATE));
-  } catch { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+    return s ? sanitizeState(JSON.parse(s)) : sanitizeState(DEFAULT_STATE);
+  } catch { return sanitizeState(DEFAULT_STATE); }
 }
 
 let state = loadState();
-// BLINDAGEM: Garante que nunca vai faltar uma tabela e dar tela preta
-state = { ...DEFAULT_STATE, ...state };
-if (!state.cartoes) state.cartoes = [];
-if (!state.contas) state.contas = [];
-if (!state.pessoas) state.pessoas = DEFAULT_STATE.pessoas;
-if (!state.casal) state.casal = DEFAULT_STATE.casal;
-if (!state.fixas) state.fixas = DEFAULT_STATE.fixas;
-if (!state.expenses) state.expenses = [];
 
-// Fica escutando a nuvem
+// Fica escutando a nuvem. Atualiza automático sem quebrar
 database.ref('financas_casal').on('value', (snapshot) => {
   const cloudState = snapshot.val();
   if (cloudState) {
-    state = { ...DEFAULT_STATE, ...cloudState }; // Blindagem na nuvem também
-    if (!state.cartoes) state.cartoes = [];
-    if (!state.contas) state.contas = [];
-    if (!state.pessoas) state.pessoas = DEFAULT_STATE.pessoas;
-    if (!state.casal) state.casal = DEFAULT_STATE.casal;
-    if (!state.fixas) state.fixas = DEFAULT_STATE.fixas;
-    if (!state.expenses) state.expenses = [];
+    state = sanitizeState(cloudState);
     localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
     renderAll(); 
   }
 });
 
+// Salva localmente e envia para a nuvem
 function saveState() {
   localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
   database.ref('financas_casal').set(state); 
@@ -819,7 +798,7 @@ function renderPersonCard(key, nome) {
       <hr class="divider">
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px;">＋ Nova fonte</div>
       <div class="add-entrada-form">
-        <input type="text" id="entrada_desc_${key}" placeholder="Salário, VA, VT, Freelance..." onkeydown="if(event.key==='Enter') addEntrada('${key}')">
+        <input type="text" id="entrada_desc_${key}" placeholder="Salário, VA, VT..." onkeydown="if(event.key==='Enter') addEntrada('${key}')">
         <input type="number" id="entrada_val_${key}" placeholder="R$ 0,00" step="50" min="0" onkeydown="if(event.key==='Enter') addEntrada('${key}')">
         <button class="btn btn-primary btn-sm" onclick="addEntrada('${key}')">＋</button>
       </div>
@@ -932,7 +911,6 @@ function renderCardsTab() {
     </div>`;
   grid.innerHTML = html;
 
-  // detalhe cartão selecionado
   const detailSection = document.getElementById('cardDetailSection');
   if (state.selectedCardId) {
     const c = state.cartoes.find(x=>x.id===state.selectedCardId);
@@ -954,7 +932,10 @@ function renderCardsTab() {
             <td><span class="cat-tag ${ci.cls}">${ci.emoji} ${ci.label}</span></td>
             <td>${e.parcelas>1?`<span class="parcela-badge">📅 ${e.parcelaAtual}/${e.parcelas}</span>`:'<span style="color:var(--muted);font-size:11px">à vista</span>'}</td>
             <td style="text-align:right;font-weight:600">${fmt(e.value)}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')" >✕</button></td>
+            <td style="display:flex; gap:4px; justify-content:flex-end;">
+              <button class="btn btn-secondary btn-sm" onclick="editExpense('${e.groupId}')" title="Editar">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')" >✕</button>
+            </td>
           </tr>`;
         }).join('');
       }
@@ -963,7 +944,6 @@ function renderCardsTab() {
     detailSection.style.display = 'none';
   }
 
-  // consolidação
   const consolidEl = document.getElementById('consolidTable');
   const consolidLabel = document.getElementById('consolidMonthLabel');
   if (consolidLabel) consolidLabel.textContent = monthLabel();
@@ -1162,8 +1142,8 @@ function updateFixa(idx,field,val){state.fixas[idx][field]=val;saveState();rende
 function toggleFixa(idx){state.fixas[idx].ativa=!state.fixas[idx].ativa;saveState();renderAll();}
 function removeFixa(idx){if(!confirm(`Remover "${state.fixas[idx].desc}"?`))return;state.fixas.splice(idx,1);saveState();renderAll();}
 
-// ═══ VARIÁVEIS ═══
-let editingExpenseGroupId = null; // Variável que controla a edição
+// ═══ VARIÁVEIS E EDIÇÃO ═══
+let editingExpenseGroupId = null; // Variável de controle de edição
 
 function monthExpenses(m=currentMonth,y=currentYear){return state.expenses.filter(e=>e.monthYear===monthKey(m,y));}
 function totalVariaveis(m=currentMonth,y=currentYear){return monthExpenses(m,y).reduce((s,e)=>s+(e.value||0),0);}
@@ -1212,7 +1192,7 @@ function addExpense(data=null) {
   
   if (!desc||isNaN(value)||value<=0) { showToast('Preencha descrição e valor.','error'); return; }
 
-  // Se for uma edição, remove a despesa antiga antes de salvar a nova
+  // Se estiver editando, apaga o antigo antes de salvar o novo
   if (editingExpenseGroupId && !data) {
     state.expenses = state.expenses.filter(e => e.groupId !== editingExpenseGroupId);
   }
@@ -1232,12 +1212,11 @@ function addExpense(data=null) {
     document.getElementById('expValue').value=''; 
     document.getElementById('expDate').value=''; 
     
-    // Reseta o botão
+    // Reseta o botão para o modo de Adicionar
     editingExpenseGroupId = null;
     const btn = document.querySelector('.manual-form .btn-primary');
     if(btn) { btn.innerHTML = '＋ Adicionar'; btn.style.background = 'var(--accent)'; }
   }
-  
   showToast(editingExpenseGroupId ? 'Despesa atualizada! ✓' : 'Despesa adicionada! ✓','success'); 
   renderAll();
 }
@@ -1282,117 +1261,30 @@ function renderExpensesTab() {
   }).join('');
 }
 function setFilter(cat){state.activeFilter=cat;renderExpensesTab();}
-// ═══ PDF READER ═══
-async function handlePDF(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const status = document.getElementById('pdfStatus');
-  status.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted)"><div class="spinner"></div> Lendo PDF... (${(file.size/1024).toFixed(0)} KB)</div>`;
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n';
-    }
-    status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ PDF lido (${pdf.numPages} página${pdf.numPages!==1?'s':''}). Extraindo lançamentos...</div>`;
-    const items = extractTransactionsFromText(fullText);
-    renderExtracted(items, fullText);
-  } catch (err) {
-    status.innerHTML = `<div style="color:var(--danger)">Erro ao ler PDF: ${err.message}<br><small>Tente importar como imagem/print.</small></div>`;
-  }
-}
 
-// ═══ IMAGE READER ═══
-async function handleImage(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const status = document.getElementById('imgStatus');
-  const canvas = document.getElementById('previewCanvas');
-  status.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted)"><div class="spinner"></div> Carregando imagem...</div>`;
-  try {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = async () => {
-      canvas.width = img.width; canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      canvas.style.display = 'block';
-      // Show preview resized
-      const maxW = 500;
-      if (img.width > maxW) {
-        canvas.style.width = maxW+'px';
-        canvas.style.height = 'auto';
-      }
-      status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ Imagem carregada. Extraindo texto via OCR...</div>`;
-
-      // Use Tesseract OCR if available, otherwise parse image as data
-      if (typeof Tesseract !== 'undefined') {
-        try {
-          const result = await Tesseract.recognize(canvas, 'por', { logger: m => {} });
-          const text = result.data.text;
-          const items = extractTransactionsFromText(text);
-          renderExtracted(items, text);
-          status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ OCR concluído. Confira os lançamentos abaixo.</div>`;
-        } catch (e) {
-          status.innerHTML = `<div style="color:var(--warning);font-size:13px">⚠ OCR falhou. Adicione os lançamentos manualmente abaixo.</div>`;
-          renderExtracted([], '');
-        }
-      } else {
-        // No OCR available — show manual entry with empty rows
-        status.innerHTML = `<div style="color:var(--warning);font-size:13px">⚠ OCR não disponível. Visualize a imagem e adicione os lançamentos manualmente abaixo.</div>`;
-        renderExtracted([], '');
-      }
-    };
-    img.src = url;
-  } catch (err) {
-    status.innerHTML = `<div style="color:var(--danger)">Erro: ${err.message}</div>`;
-  }
-}
-
-// ═══ SMART TEXT EXTRACTION ═══
+// ═══ SMART TEXT EXTRACTION (Sem OCR por enquanto) ═══
 function extractTransactionsFromText(text) {
   const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
   const results = [];
-
-  // Blacklist lines
   const skipWords = ['pagamento','fatura','total','limite','vencimento','saldo','anterior','iof','juros','encargo','rotativo','parcelado em','disponivel','disponível','crédito disponível','CRÉDITO DISPONÍVEL','cpf','cnpj','extrato','conta corrente','agência'];
-
-  // Patterns for money values
   const moneyRe = /R?\$?\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2})|(\d+),(\d{2}))/g;
-
-  // Date patterns
   const dateRe = /(\d{2})[\/\-](\d{2})(?:[\/\-](\d{2,4}))?/;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lower = line.toLowerCase();
-
-    // Skip blacklisted
     if (skipWords.some(w => lower.includes(w))) continue;
-
-    // Find money values
     const moneyMatches = [...line.matchAll(moneyRe)];
     if (!moneyMatches.length) continue;
-
-    // Get the last money value as value (usually the amount column)
     const lastMoney = moneyMatches[moneyMatches.length-1];
     const rawVal = lastMoney[1].replace(/\./g,'').replace(',','.');
     const value = parseFloat(rawVal);
     if (!value || value <= 0 || value > 99999) continue;
-
-    // Description: everything before the money
     let desc = line.substring(0, lastMoney.index).trim();
-    // Remove dates from description
     desc = desc.replace(/\d{2}\/\d{2}(\/\d{2,4})?/g,'').trim();
-    // Remove leading/trailing special chars
     desc = desc.replace(/^[\s\-\|:]+|[\s\-\|:]+$/g,'').trim();
     if (desc.length < 2) continue;
 
-    // Try to find date
     let date = today();
     const dateMatch = line.match(dateRe);
     if (dateMatch) {
@@ -1403,7 +1295,6 @@ function extractTransactionsFromText(text) {
       date = `${d}/${m}/${y}`;
     }
 
-    // Detect installments e.g. "02/06" or "Parcela 2 de 6"
     let parcelas = 1, parcelaAtual = 1;
     const parcRe = /(\d{1,2})\s*[\/de]+\s*(\d{1,2})/i;
     const parcMatch = line.match(parcRe);
@@ -1412,13 +1303,9 @@ function extractTransactionsFromText(text) {
       parcelas = parseInt(parcMatch[2]);
       if (parcelaAtual > parcelas) { parcelaAtual=1; parcelas=1; }
     }
-
-    // Auto-categorize
     const cat = autoCategorize(desc + ' ' + line);
-
     results.push({ desc, value, cat, date, parcelas, parcelaAtual });
   }
-
   return results;
 }
 
@@ -1771,4 +1658,5 @@ selectCardColor(0);
 renderAll();
 </script>
 </body>
+</html>
 </html>
