@@ -707,7 +707,6 @@ const DEFAULT_STATE = {
   selectedCardColor: 0
 };
 
-// Carrega primeiro o local para a tela não piscar em branco
 function loadState() {
   try {
     const s = localStorage.getItem('financasCasal_v4');
@@ -716,22 +715,31 @@ function loadState() {
 }
 
 let state = loadState();
+// BLINDAGEM: Garante que nunca vai faltar uma tabela e dar tela preta
+state = { ...DEFAULT_STATE, ...state };
 if (!state.cartoes) state.cartoes = [];
 if (!state.contas) state.contas = [];
+if (!state.pessoas) state.pessoas = DEFAULT_STATE.pessoas;
+if (!state.casal) state.casal = DEFAULT_STATE.casal;
+if (!state.fixas) state.fixas = DEFAULT_STATE.fixas;
+if (!state.expenses) state.expenses = [];
 
-// Fica escutando a nuvem. Se alguém mexer em outro celular, atualiza aqui na hora!
+// Fica escutando a nuvem
 database.ref('financas_casal').on('value', (snapshot) => {
   const cloudState = snapshot.val();
   if (cloudState) {
-    state = cloudState;
+    state = { ...DEFAULT_STATE, ...cloudState }; // Blindagem na nuvem também
     if (!state.cartoes) state.cartoes = [];
     if (!state.contas) state.contas = [];
+    if (!state.pessoas) state.pessoas = DEFAULT_STATE.pessoas;
+    if (!state.casal) state.casal = DEFAULT_STATE.casal;
+    if (!state.fixas) state.fixas = DEFAULT_STATE.fixas;
+    if (!state.expenses) state.expenses = [];
     localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
     renderAll(); 
   }
 });
 
-// Salva localmente e envia para a nuvem
 function saveState() {
   localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
   database.ref('financas_casal').set(state); 
@@ -1155,6 +1163,8 @@ function toggleFixa(idx){state.fixas[idx].ativa=!state.fixas[idx].ativa;saveStat
 function removeFixa(idx){if(!confirm(`Remover "${state.fixas[idx].desc}"?`))return;state.fixas.splice(idx,1);saveState();renderAll();}
 
 // ═══ VARIÁVEIS ═══
+let editingExpenseGroupId = null; // Variável que controla a edição
+
 function monthExpenses(m=currentMonth,y=currentYear){return state.expenses.filter(e=>e.monthYear===monthKey(m,y));}
 function totalVariaveis(m=currentMonth,y=currentYear){return monthExpenses(m,y).reduce((s,e)=>s+(e.value||0),0);}
 
@@ -1167,6 +1177,31 @@ function populateCartaoSelect(selId, selectedVal='') {
   });
 }
 
+function editExpense(groupId) {
+  const exp = state.expenses.find(e => e.groupId === groupId);
+  if(!exp) return;
+
+  document.getElementById('expDesc').value = exp.desc;
+  document.getElementById('expValue').value = exp.totalValue || (exp.value * exp.parcelas);
+  document.getElementById('expCat').value = exp.cat;
+  document.getElementById('expParcelas').value = exp.parcelas;
+  document.getElementById('expDate').value = exp.date;
+  
+  populateCartaoSelect('expCartao');
+  document.getElementById('expCartao').value = exp.cardId || '';
+
+  editingExpenseGroupId = groupId;
+  
+  const btn = document.querySelector('.manual-form .btn-primary');
+  if(btn) {
+    btn.innerHTML = '💾 Salvar Edição';
+    btn.style.background = 'var(--accent2)';
+  }
+  
+  switchTab('variaveis');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function addExpense(data=null) {
   const desc    = data?data.desc    : document.getElementById('expDesc').value.trim();
   const value   = data?data.value   : parseFloat(document.getElementById('expValue').value);
@@ -1174,23 +1209,45 @@ function addExpense(data=null) {
   const parcelas= data?(data.parcelas||1) : parseInt(document.getElementById('expParcelas').value);
   const dateStr = data?(data.date||today()) : (document.getElementById('expDate').value||today());
   const cardId  = data?(data.cardId||'') : (document.getElementById('expCartao')?.value||'');
-  if (!desc||!value||value<=0) { showToast('Preencha descrição e valor.','error'); return; }
+  
+  if (!desc||isNaN(value)||value<=0) { showToast('Preencha descrição e valor.','error'); return; }
+
+  // Se for uma edição, remove a despesa antiga antes de salvar a nova
+  if (editingExpenseGroupId && !data) {
+    state.expenses = state.expenses.filter(e => e.groupId !== editingExpenseGroupId);
+  }
+
   const parcelValue = value/parcelas;
-  const groupId = Date.now()+'_'+Math.random().toString(36).slice(2);
+  const groupId = (editingExpenseGroupId && !data) ? editingExpenseGroupId : Date.now()+'_'+Math.random().toString(36).slice(2);
+  
   for (let i=1;i<=parcelas;i++) {
     let fm=currentMonth+(i-1), fy=currentYear;
     while(fm>11){fm-=12;fy++;}
     state.expenses.push({id:groupId+'_'+i,groupId,desc,value:parcelValue,totalValue:value,cat,parcelas,parcelaAtual:i,date:dateStr,monthYear:monthKey(fm,fy),cardId});
   }
   saveState();
-  if (!data) { document.getElementById('expDesc').value=''; document.getElementById('expValue').value=''; document.getElementById('expDate').value=''; }
-  showToast('Despesa adicionada! ✓','success'); renderAll();
+  
+  if (!data) { 
+    document.getElementById('expDesc').value=''; 
+    document.getElementById('expValue').value=''; 
+    document.getElementById('expDate').value=''; 
+    
+    // Reseta o botão
+    editingExpenseGroupId = null;
+    const btn = document.querySelector('.manual-form .btn-primary');
+    if(btn) { btn.innerHTML = '＋ Adicionar'; btn.style.background = 'var(--accent)'; }
+  }
+  
+  showToast(editingExpenseGroupId ? 'Despesa atualizada! ✓' : 'Despesa adicionada! ✓','success'); 
+  renderAll();
 }
+
 function deleteExpense(groupId,parcelas,desc) {
   if (parcelas>1){if(!confirm(`Remover todas as ${parcelas} parcelas de "${desc}"?`))return;}
   state.expenses=state.expenses.filter(e=>e.groupId!==groupId);
   saveState();renderAll();
 }
+
 function renderExpensesTab() {
   populateCartaoSelect('expCartao');
   const cats=['all',...Object.keys(CAT)];
@@ -1205,6 +1262,7 @@ function renderExpensesTab() {
   const countEl=document.getElementById('expenseCount');if(countEl)countEl.textContent=all.length;
   const tbody=document.getElementById('expenseTableBody');if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🧾</div><p>Nenhuma despesa neste mês</p></div></td></tr>`;return;}
+  
   tbody.innerHTML=filtered.sort((a,b)=>a.date<b.date?1:-1).map(e=>{
     const ci=CAT[e.cat]||CAT.outros;
     const card = e.cardId ? state.cartoes.find(c=>c.id===e.cardId) : null;
@@ -1216,12 +1274,14 @@ function renderExpensesTab() {
       <td>${cardTag}</td>
       <td>${e.parcelas>1?`<span class="parcela-badge">📅 ${e.parcelaAtual}/${e.parcelas}</span>`:'<span style="color:var(--muted);font-size:11px">à vista</span>'}</td>
       <td style="text-align:right;font-weight:600;font-size:14px">${fmt(e.value)}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')">✕</button></td>
+      <td style="display:flex; gap:4px; justify-content:flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="editExpense('${e.groupId}')" title="Editar">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')" title="Excluir">✕</button>
+      </td>
     </tr>`;
   }).join('');
 }
 function setFilter(cat){state.activeFilter=cat;renderExpensesTab();}
-
 // ═══ PDF READER ═══
 async function handlePDF(input) {
   const file = input.files[0];
