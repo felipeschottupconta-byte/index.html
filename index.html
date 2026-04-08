@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanças do Casal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0c0e14;
+  --surface: #13161f;
+  --surface2: #191d2a;
+  --surface3: #1f2436;
+  --border: #252c42;
+  --border2: #2e3755;
+  --accent: #f0c060;
+  --accent2: #60a8f0;
+  --accent3: #f060a8;
+  --accent4: #60f0a8;
+  --text: #e8eaf6;
+  --muted: #6b75a0;
+  --muted2: #8890b0;
+  --success: #5de8a8;
+  --danger: #f07070;
+  --warning: #f0b840;
+  --info: #70b8f0;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,.5);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,.6);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; overflow-x: hidden; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; gap: 16px; }
+.logo { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--accent); display: flex; align-items: center; gap: 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.logo-couple { font-size: 13px; color: var(--muted2); font-family: 'DM Sans', sans-serif; font-weight: 400; margin-left: 2px; }
+.logo:hover .logo-couple { color: var(--accent); }
+.month-pill { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 30px; padding: 5px 14px; }
+.month-pill button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; transition: color .15s; }
+.month-pill button:hover { color: var(--accent); }
+.month-pill span { font-weight: 500; font-size: 13px; min-width: 108px; text-align: center; }
+
+.nav-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; gap: 2px; overflow-x: auto; }
+.nav-tab { padding: 13px 18px; cursor: pointer; color: var(--muted); font-weight: 500; font-size: 13px; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; display: flex; align-items: center; gap: 7px; user-select: none; }
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+.card-title { font-family: 'Playfair Display', serif; font-size: 15px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+.card-title .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; position: relative; overflow: hidden; transition: border-color .2s; }
+.sum-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.sum-card:hover { border-color: var(--border2); }
+.sum-card.renda::before { background: linear-gradient(90deg, var(--success), var(--accent4)); }
+.sum-card.despesa::before { background: linear-gradient(90deg, var(--danger), var(--warning)); }
+.sum-card.saldo::before { background: linear-gradient(90deg, var(--accent), #f0a060); }
+.sum-card.fixas::before { background: linear-gradient(90deg, var(--accent2), #a060f0); }
+.sum-card.previsao::before { background: linear-gradient(90deg, var(--accent3), var(--accent2)); }
+.sum-card.contas::before { background: linear-gradient(90deg, var(--accent4), var(--accent2)); }
+.sum-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; margin-bottom: 8px; }
+.sum-value { font-family: 'Playfair Display', serif; font-size: 24px; line-height: 1; }
+.sum-card.renda .sum-value { color: var(--success); }
+.sum-card.despesa .sum-value { color: var(--danger); }
+.sum-card.saldo .sum-value { color: var(--accent); }
+.sum-card.fixas .sum-value { color: var(--accent2); }
+.sum-card.previsao .sum-value { color: var(--accent3); }
+.sum-card.contas .sum-value { color: var(--accent4); }
+.sum-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+.income-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 700px) { .income-grid { grid-template-columns: 1fr; } }
+
+.person-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.person-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.person-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.avatar-a { background: linear-gradient(135deg, #5090d8, #3060b0); }
+.avatar-b { background: linear-gradient(135deg, #c05890, #902060); }
+
+.entrada-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(37,44,66,.5); }
+.entrada-row:last-child { border-bottom: none; }
+.entrada-desc { flex: 2; font-size: 13px; font-weight: 500; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entrada-value { flex: 1; text-align: right; font-weight: 600; font-size: 13px; color: var(--success); min-width: 90px; }
+.add-entrada-form { display: flex; gap: 8px; margin-top: 12px; }
+.add-entrada-form input { flex: 1; }
+.add-entrada-form input[type="number"] { flex: 0 0 130px; }
+
+input[type="number"], input[type="text"], input[type="date"], select, textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 8px 11px; font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; transition: border-color .2s, background .2s; width: 100%; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--surface3); }
+input[type="number"] { text-align: right; }
+select option { background: var(--surface2); }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: #1a1200; }
+.btn-primary:hover { background: #f8d070; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: rgba(240,112,112,.12); color: var(--danger); border: 1px solid rgba(240,112,112,.25); }
+.btn-danger:hover { background: rgba(240,112,112,.22); }
+.btn-success { background: rgba(93,232,168,.12); color: var(--success); border: 1px solid rgba(93,232,168,.25); }
+.btn-success:hover { background: rgba(93,232,168,.22); }
+.btn-ghost { background: none; color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+.btn-info { background: rgba(96,168,240,.12); color: var(--accent2); border: 1px solid rgba(96,168,240,.25); }
+.btn-info:hover { background: rgba(96,168,240,.22); }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+.btn-icon { padding: 5px 7px; font-size: 13px; line-height: 1; border-radius: 6px; }
+
+.expense-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.expense-table th { text-align: left; padding: 9px 11px; color: var(--muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--border); }
+.expense-table td { padding: 10px 11px; border-bottom: 1px solid rgba(37,44,66,.6); vertical-align: middle; }
+.expense-table tr:last-child td { border-bottom: none; }
+.expense-table tr:hover td { background: rgba(255,255,255,.015); }
+
+.cat-tag { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.cat-alimentacao { background: rgba(240,192,96,.15); color: var(--accent); }
+.cat-combustivel  { background: rgba(240,112,96,.15); color: #f07860; }
+.cat-transporte   { background: rgba(96,168,240,.15); color: var(--accent2); }
+.cat-saude        { background: rgba(93,232,168,.15); color: var(--success); }
+.cat-pet          { background: rgba(240,192,96,.12); color: #e0a040; }
+.cat-lazer        { background: rgba(240,96,168,.15); color: var(--accent3); }
+.cat-moradia      { background: rgba(240,184,64,.15); color: var(--warning); }
+.cat-educacao     { background: rgba(96,240,168,.15); color: var(--accent4); }
+.cat-servicos     { background: rgba(107,117,160,.15); color: var(--muted2); }
+.cat-outros       { background: rgba(107,117,160,.12); color: var(--muted); }
+.parcela-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; background: rgba(96,168,240,.12); color: var(--accent2); border-radius: 20px; font-size: 11px; font-weight: 600; }
+
+.manual-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+@media (max-width: 1100px) { .manual-form { grid-template-columns: 1fr 1fr; } }
+.form-group label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 5px; }
+
+.bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bar-label { width: 150px; font-size: 12px; color: var(--muted); flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.bar-value { width: 88px; font-size: 12px; font-weight: 600; text-align: right; flex-shrink: 0; }
+
+/* CARTÕES VISUAIS */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin-bottom: 20px; }
+.credit-card-visual { border-radius: 16px; padding: 22px 24px; position: relative; overflow: hidden; min-height: 160px; cursor: pointer; transition: transform .2s, box-shadow .2s; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+.credit-card-visual:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+.credit-card-visual::before { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.06); }
+.credit-card-visual::after { content:''; position:absolute; bottom:-60px; left:-20px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.04); }
+.cc-bank { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; opacity: .8; margin-bottom: 4px; }
+.cc-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.cc-limit-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.cc-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; }
+.cc-value { font-size: 20px; font-weight: 700; font-family: 'Playfair Display', serif; }
+.cc-sublabel { font-size: 11px; opacity: .65; }
+.cc-actions { display: flex; gap: 8px; margin-top: 12px; position: relative; z-index: 2; }
+.add-card-btn { border: 2px dashed var(--border2); border-radius: 16px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all .2s; color: var(--muted); background: var(--surface); }
+.add-card-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,192,96,.04); }
+.add-card-btn .add-icon { font-size: 28px; }
+.add-card-btn span { font-size: 13px; font-weight: 600; }
+
+/* CONTAS BANCÁRIAS */
+.bank-accounts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.bank-account-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; transition: border-color .2s; }
+.bank-account-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.bank-account-card:hover { border-color: var(--border2); }
+.ba-bank { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; margin-bottom: 4px; }
+.ba-name { font-weight: 600; font-size: 15px; margin-bottom: 12px; }
+.ba-balance { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--accent4); }
+.ba-type { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.ba-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* FATURA */
+.upload-area { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; transition: all .2s; position: relative; }
+.upload-area:hover, .upload-area.dragover { border-color: var(--accent); background: rgba(240,192,96,.04); }
+.upload-area input { display: none; }
+.upload-icon { font-size: 32px; margin-bottom: 10px; }
+.upload-title { font-weight: 600; margin-bottom: 5px; }
+.upload-sub { color: var(--muted); font-size: 12px; }
+
+.extracted-row { display: flex; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid rgba(37,44,66,.5); }
+.extracted-row:last-child { border-bottom: none; }
+.extracted-row input[type="text"] { flex: 2; }
+.extracted-row input[type="number"] { flex: 0 0 120px; }
+.extracted-row select { flex: 1; min-width: 130px; }
+
+.preview-canvas { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px; display: none; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); transition: all .15s; user-select: none; }
+.chip:hover { color: var(--text); }
+.chip.active { background: var(--accent); color: #1a1200; border-color: var(--accent); }
+
+hr.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.forecast-month { margin-bottom: 16px; padding: 16px; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.forecast-month-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.forecast-month-title { font-weight: 600; font-size: 14px; }
+
+.toast { position: fixed; bottom: 22px; right: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 500; z-index: 999; display: flex; align-items: center; gap: 9px; box-shadow: var(--shadow-lg); transform: translateY(80px); opacity: 0; transition: all .25s ease; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--success); }
+.toast.error { border-color: var(--danger); }
+
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.15); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; width: 460px; max-width: 94vw; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 18px; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+.scroll-table { overflow-x: auto; }
+.badge { font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
+.mb-16 { margin-bottom: 16px; }
+.mb-20 { margin-bottom: 20px; }
+
+.fixa-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(37,44,66,.5); }
+.fixa-row:last-child { border-bottom: none; }
+.fixa-toggle { width: 36px; height: 20px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 10px; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
+.fixa-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--muted); border-radius: 50%; transition: transform .2s, background .2s; }
+.fixa-toggle.on { background: rgba(93,232,168,.2); border-color: var(--success); }
+.fixa-toggle.on::after { transform: translateX(16px); background: var(--success); }
+
+/* CARD COLORS */
+.cc-gradient-0 { background: linear-gradient(135deg, #1a3a6a, #2a5ab0); color: #e8f4ff; }
+.cc-gradient-1 { background: linear-gradient(135deg, #3a1a6a, #7a2ab0); color: #f0e8ff; }
+.cc-gradient-2 { background: linear-gradient(135deg, #1a5a3a, #2a9a60); color: #e8fff4; }
+.cc-gradient-3 { background: linear-gradient(135deg, #6a1a1a, #b02a2a); color: #ffe8e8; }
+.cc-gradient-4 { background: linear-gradient(135deg, #4a3a1a, #906020); color: #fff4e8; }
+.cc-gradient-5 { background: linear-gradient(135deg, #1a4a5a, #2a8090); color: #e8f8ff; }
+.cc-gradient-6 { background: linear-gradient(135deg, #2a2a2a, #505050); color: #f0f0f0; }
+
+.progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+.card-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.info-box { background: rgba(96,168,240,.08); border: 1px solid rgba(96,168,240,.2); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--muted2); line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo" onclick="openCasalModal()">
+    💑 <span id="logoText">Finanças</span>
+    <span class="logo-couple" id="logoCasal">do Casal ✎</span>
+  </div>
+  <div class="month-pill">
+    <button onclick="changeMonth(-1)">‹</button>
+    <span id="currentMonthLabel"></span>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('dashboard')" data-tab="dashboard">📊 Visão Geral</div>
+  <div class="nav-tab" onclick="switchTab('renda')" data-tab="renda">💰 Renda</div>
+  <div class="nav-tab" onclick="switchTab('cartoes')" data-tab="cartoes">💳 Cartões</div>
+  <div class="nav-tab" onclick="switchTab('fixas')" data-tab="fixas">📌 Despesas Fixas</div>
+  <div class="nav-tab" onclick="switchTab('variaveis')" data-tab="variaveis">🧾 Variáveis</div>
+  <div class="nav-tab" onclick="switchTab('fatura')" data-tab="fatura">📄 Importar Fatura</div>
+  <div class="nav-tab" onclick="switchTab('contas')" data-tab="contas">🏦 Contas Bancárias</div>
+  <div class="nav-tab" onclick="switchTab('previsao')" data-tab="previsao">🔮 Previsão</div>
+</div>
+
+<main>
+
+<!-- DASHBOARD -->
+<div class="tab-content active" id="tab-dashboard">
+  <div class="summary-grid" id="summaryCards"></div>
+  <div class="two-col mb-20">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--success)"></div> Composição da Renda</div>
+      <div id="incomeBreakdown"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--danger)"></div> Gastos por Categoria</div>
+      <div id="expenseBreakdown"></div>
+    </div>
+  </div>
+  <div class="two-col mb-20">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--accent2)"></div> Cartões — Uso Atual</div>
+      <div id="dashCartoes"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--accent4)"></div> Contas Bancárias</div>
+      <div id="dashContas"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--muted)"></div> Últimos Lançamentos</div>
+    <div class="scroll-table"><table class="expense-table" id="recentExpenses"></table></div>
+  </div>
+</div>
+
+<!-- RENDA -->
+<div class="tab-content" id="tab-renda">
+  <div class="income-grid" id="incomeGrid"></div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--accent)"></div> Total Combinado</div>
+    <div id="combinedIncome" style="font-family:'Playfair Display',serif;font-size:36px;color:var(--success);margin-top:4px;"></div>
+    <div id="combinedSub" style="color:var(--muted);font-size:13px;margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- CARTÕES -->
+<div class="tab-content" id="tab-cartoes">
+  <div class="mb-20">
+    <div class="cards-grid" id="cardsGrid"></div>
+  </div>
+  <div class="card mb-20" id="cardDetailSection" style="display:none">
+    <div class="card-title">
+      <div class="dot" style="background:var(--accent)"></div>
+      <span id="cardDetailTitle">Despesas do Cartão</span>
+      <span id="cardDetailTotal" class="badge" style="background:rgba(240,112,112,.15);color:var(--danger);margin-left:auto"></span>
+    </div>
+    <div class="scroll-table">
+      <table class="expense-table" id="cardExpenseTable">
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+        <tbody id="cardExpenseBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--accent3)"></div> Consolidação de Todos os Cartões — <span id="consolidMonthLabel"></span></div>
+    <div id="consolidTable"></div>
+  </div>
+</div>
+
+<!-- DESPESAS FIXAS -->
+<div class="tab-content" id="tab-fixas">
+  <div class="card mb-20">
+    <div class="card-title"><div class="dot" style="background:var(--warning)"></div> Despesas Mensais Fixas
+      <span class="badge" style="background:rgba(240,184,64,.15);color:var(--warning)" id="fixasTotal"></span>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Estas despesas são adicionadas automaticamente a todos os meses na Previsão.</p>
+    <div id="fixasTable"></div>
+    <hr class="divider">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <input type="text" id="novaFixaDesc" placeholder="Descrição..." style="flex:2;min-width:140px;">
+      <input type="number" id="novaFixaValor" placeholder="Valor (R$)" style="flex:1;min-width:120px;" step="0.01" min="0">
+      <select id="novaFixaCat" style="flex:1;min-width:140px;">
+        <option value="moradia">🏠 Moradia</option>
+        <option value="alimentacao">🍽️ Alimentação</option>
+        <option value="combustivel">🚗 Combustível</option>
+        <option value="transporte">🚌 Transporte</option>
+        <option value="saude">❤️ Saúde</option>
+        <option value="pet">🐾 Pet</option>
+        <option value="lazer">🎮 Lazer</option>
+        <option value="educacao">📚 Educação</option>
+        <option value="servicos">💼 Serviços</option>
+        <option value="outros">📦 Outros</option>
+      </select>
+      <button class="btn btn-primary" onclick="addFixa()">＋ Adicionar</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--accent2)"></div> Impacto no Orçamento</div>
+    <div id="fixasImpact"></div>
+  </div>
+</div>
+
+<!-- VARIÁVEIS -->
+<div class="tab-content" id="tab-variaveis">
+  <div class="card mb-20">
+    <div class="card-title"><div class="dot" style="background:var(--accent)"></div> Adicionar Despesa Variável</div>
+    <div class="manual-form">
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="expDesc" placeholder="Ex: Mercado, Netflix, Posto...">
+      </div>
+      <div class="form-group">
+        <label>Valor Total (R$)</label>
+        <input type="number" id="expValue" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="expCat">
+          <option value="alimentacao">🍽️ Alimentação</option>
+          <option value="combustivel">🚗 Combustível</option>
+          <option value="transporte">🚌 Transporte</option>
+          <option value="saude">❤️ Saúde</option>
+          <option value="pet">🐾 Pet</option>
+          <option value="lazer">🎮 Lazer</option>
+          <option value="moradia">🏠 Moradia</option>
+          <option value="educacao">📚 Educação</option>
+          <option value="servicos">💼 Serviços</option>
+          <option value="outros">📦 Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cartão / Débito</label>
+        <select id="expCartao">
+          <option value="">— Sem cartão (débito/dinheiro)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Parcelas</label>
+        <select id="expParcelas">
+          <option value="1">1x (à vista)</option>
+          <option value="2">2x</option><option value="3">3x</option>
+          <option value="4">4x</option><option value="5">5x</option>
+          <option value="6">6x</option><option value="10">10x</option>
+          <option value="12">12x</option><option value="18">18x</option>
+          <option value="24">24x</option><option value="36">36x</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="text" id="expDate" placeholder="dd/mm/aaaa">
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addExpense()">＋ Adicionar</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      <div class="dot" style="background:var(--danger)"></div>
+      Despesas do Mês
+      <span id="expenseCount" class="badge" style="background:rgba(240,112,112,.15);color:var(--danger);">0</span>
+    </div>
+    <div class="chip-row" id="catFilter"></div>
+    <div class="scroll-table">
+      <table class="expense-table" id="expenseTable">
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Tipo</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+        <tbody id="expenseTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- FATURA -->
+<div class="tab-content" id="tab-fatura">
+  <div class="two-col mb-20">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:#6048d0"></div> Importar PDF da Fatura</div>
+      <div class="upload-area" id="pdfUpload" onclick="document.getElementById('pdfInput').click()">
+        <div class="upload-icon">📄</div>
+        <div class="upload-title">Clique ou arraste o PDF aqui</div>
+        <div class="upload-sub">Inter · Nubank · Bradesco · Mercado Pago · outros</div>
+        <input type="file" id="pdfInput" accept=".pdf" onchange="handlePDF(this)">
+      </div>
+      <div id="pdfStatus" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--accent3)"></div> Importar Foto / Print</div>
+      <div class="upload-area" id="imgUpload" onclick="document.getElementById('imgInput').click()">
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-title">Clique ou arraste a imagem aqui</div>
+        <div class="upload-sub">JPG · PNG · WEBP — print ou foto da fatura</div>
+        <input type="file" id="imgInput" accept="image/*" onchange="handleImage(this)">
+      </div>
+      <canvas id="previewCanvas" class="preview-canvas"></canvas>
+      <div id="imgStatus" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div id="faturaCartaoSelect" style="display:none" class="card mb-20">
+    <div class="card-title"><div class="dot" style="background:var(--accent)"></div> Associar ao Cartão</div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+      <select id="faturaCartaoId" style="flex:1;min-width:200px;">
+        <option value="">— Nenhum cartão (registrar sem cartão)</option>
+      </select>
+      <span style="color:var(--muted);font-size:12px">Os lançamentos importados serão vinculados a este cartão.</span>
+    </div>
+  </div>
+
+  <div id="extractedArea"></div>
+
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--muted)"></div> Como funciona</div>
+    <div class="info-box">
+      <p>📄 <strong>PDF:</strong> o texto é extraído diretamente — funciona com faturas digitais (Inter, Nubank, Bradesco…). Faturas escaneadas podem não funcionar.</p>
+      <p>🖼️ <strong>Imagem / Print:</strong> o texto é lido pixel a pixel via OCR local no navegador. Funciona offline, sem envio a servidores.</p>
+      <p>✏️ Após a extração, revise e edite cada linha antes de importar. Você pode ajustar descrição, valor e categoria.</p>
+      <p>📅 Parcelas futuras aparecem automaticamente na aba <strong>Previsão</strong>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CONTAS BANCÁRIAS -->
+<div class="tab-content" id="tab-contas">
+  <div class="bank-accounts-grid" id="bankAccountsGrid"></div>
+  <div class="card">
+    <div class="card-title"><div class="dot" style="background:var(--accent4)"></div> Total em Contas</div>
+    <div id="totalContas" style="font-family:'Playfair Display',serif;font-size:36px;color:var(--accent4);margin-top:4px;"></div>
+    <div id="contasBreakdown" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- PREVISÃO -->
+<div class="tab-content" id="tab-previsao">
+  <div class="card mb-20">
+    <div class="card-title"><div class="dot" style="background:var(--accent2)"></div> Previsão dos Próximos 6 Meses</div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Inclui despesas fixas + parcelas em aberto de todas as compras.</p>
+    <div id="forecastContent"></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--warning)"></div> Fixas Todo Mês</div>
+      <div id="forecastFixas"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--accent3)"></div> Parcelas em Aberto</div>
+      <div class="scroll-table">
+        <table class="expense-table" id="installmentsTable">
+          <thead><tr><th>Descrição</th><th>Parcela</th><th>Restantes</th></tr></thead>
+          <tbody id="installmentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- MODAL CASAL -->
+<div class="modal-backdrop" id="casalModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Configurar o Casal</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Nome — Pessoa 1</label>
+      <input type="text" id="modalNome1" placeholder="Ex: Felipe">
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Nome — Pessoa 2</label>
+      <input type="text" id="modalNome2" placeholder="Ex: Ana">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCasalModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCasal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO CARTÃO -->
+<div class="modal-backdrop" id="cardModal">
+  <div class="modal">
+    <div class="modal-title" id="cardModalTitle">💳 Novo Cartão</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Nome do Cartão</label>
+      <input type="text" id="cardName" placeholder="Ex: Nubank, Inter Gold, Visa Bradesco...">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Banco / Emissor</label>
+      <input type="text" id="cardBank" placeholder="Ex: Nubank, Inter, Bradesco...">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Limite Total (R$) — deixe 0 se não quiser controlar</label>
+      <input type="number" id="cardLimit" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Cor do Cartão</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="colorPicker">
+        <div class="cc-gradient-0" onclick="selectCardColor(0)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-1" onclick="selectCardColor(1)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-2" onclick="selectCardColor(2)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-3" onclick="selectCardColor(3)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-4" onclick="selectCardColor(4)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-5" onclick="selectCardColor(5)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+        <div class="cc-gradient-6" onclick="selectCardColor(6)" style="width:40px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;"></div>
+      </div>
+    </div>
+    <input type="hidden" id="cardEditId">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCardModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCard()">Salvar Cartão</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONTA BANCÁRIA -->
+<div class="modal-backdrop" id="contaModal">
+  <div class="modal">
+    <div class="modal-title" id="contaModalTitle">🏦 Nova Conta Bancária</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Nome da Conta</label>
+      <input type="text" id="contaNome" placeholder="Ex: Conta Corrente, Poupança Inter...">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Banco</label>
+      <input type="text" id="contaBanco" placeholder="Ex: Inter, Nubank, Bradesco, XP...">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Tipo</label>
+      <select id="contaTipo">
+        <option value="corrente">Conta Corrente</option>
+        <option value="poupanca">Poupança</option>
+        <option value="investimento">Investimento</option>
+        <option value="carteira">Carteira Digital</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Saldo Atual (R$)</label>
+      <input type="number" id="contaSaldo" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <input type="hidden" id="contaEditId">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeContaModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveConta()">Salvar Conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ATUALIZAR SALDO -->
+<div class="modal-backdrop" id="saldoModal">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">💰 Atualizar Saldo</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;" id="saldoContaNome"></div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Novo Saldo (R$)</label>
+      <input type="number" id="novoSaldo" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <input type="hidden" id="saldoContaId">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeSaldoModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSaldo()">Atualizar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ PDF.JS SETUP ═══
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ═══ CATEGORIAS ═══
+const CAT = {
+  alimentacao: { label:'Alimentação', emoji:'🍽️', cls:'cat-alimentacao' },
+  combustivel:  { label:'Combustível',  emoji:'🚗', cls:'cat-combustivel' },
+  transporte:   { label:'Transporte',   emoji:'🚌', cls:'cat-transporte' },
+  saude:        { label:'Saúde',        emoji:'❤️', cls:'cat-saude' },
+  pet:          { label:'Pet',          emoji:'🐾', cls:'cat-pet' },
+  lazer:        { label:'Lazer',        emoji:'🎮', cls:'cat-lazer' },
+  moradia:      { label:'Moradia',      emoji:'🏠', cls:'cat-moradia' },
+  educacao:     { label:'Educação',     emoji:'📚', cls:'cat-educacao' },
+  servicos:     { label:'Serviços',     emoji:'💼', cls:'cat-servicos' },
+  outros:       { label:'Outros',       emoji:'📦', cls:'cat-outros' },
+};
+
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let currentMonth = new Date().getMonth();
+let currentYear  = new Date().getFullYear();
+
+// ═══ STATE ═══
+const DEFAULT_STATE = {
+  casal: { nome1: 'Felipe', nome2: 'Ana' },
+  pessoas: {
+    a: { entradas: [
+      { id: 'e_a1', desc: 'Salário', value: 0 },
+      { id: 'e_a2', desc: 'Vale Alimentação', value: 0 },
+      { id: 'e_a3', desc: 'Vale Transporte', value: 0 },
+    ]},
+    b: { entradas: [
+      { id: 'e_b1', desc: 'Salário', value: 0 },
+      { id: 'e_b2', desc: 'Vale Alimentação', value: 0 },
+      { id: 'e_b3', desc: 'Vale Transporte', value: 0 },
+    ]}
+  },
+  fixas: [
+    { id: 'fix_1', desc: 'Financiamento Apartamento', value: 1290, cat: 'moradia', ativa: true },
+    { id: 'fix_2', desc: 'Consórcio', value: 410, cat: 'moradia', ativa: true },
+    { id: 'fix_3', desc: 'Faculdade', value: 0, cat: 'educacao', ativa: true },
+  ],
+  expenses: [],
+  cartoes: [],
+  contas: [],
+  activeFilter: 'all',
+  selectedCardId: null,
+  selectedCardColor: 0
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('financasCasal_v4');
+    if (s) return JSON.parse(s);
+    // migrate from old version
+    const old = localStorage.getItem('financasCasal_v3');
+    if (old) {
+      const o = JSON.parse(old);
+      return { ...DEFAULT_STATE, ...o, cartoes: [], contas: [] };
+    }
+    return JSON.parse(JSON.stringify(DEFAULT_STATE));
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+}
+function saveState() { localStorage.setItem('financasCasal_v4', JSON.stringify(state)); }
+let state = loadState();
+if (!state.cartoes) state.cartoes = [];
+if (!state.contas) state.contas = [];
+
+// ═══ MÊS ═══
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  renderAll();
+}
+function monthKey(m=currentMonth, y=currentYear) { return `${y}-${String(m+1).padStart(2,'0')}`; }
+function monthLabel(m=currentMonth, y=currentYear) { return `${MONTHS[m]} ${y}`; }
+
+function fmt(n) {
+  if (isNaN(n)||n==null) n=0;
+  return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function today() {
+  const d=new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+// ═══ TABS ═══
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  renderAll();
+}
+
+// ═══ RENDA ═══
+function totalPessoa(key) { return (state.pessoas[key]?.entradas||[]).reduce((s,e)=>s+(e.value||0),0); }
+function totalRendaGeral() { return totalPessoa('a') + totalPessoa('b'); }
+
+function addEntrada(key) {
+  const descEl = document.getElementById(`entrada_desc_${key}`);
+  const valEl  = document.getElementById(`entrada_val_${key}`);
+  const desc  = descEl.value.trim();
+  const value = parseFloat(valEl.value);
+  if (!desc) { showToast('Informe a descrição.','error'); return; }
+  if (isNaN(value)||value<0) { showToast('Valor inválido.','error'); return; }
+  state.pessoas[key].entradas.push({ id:'e_'+Date.now(), desc, value });
+  descEl.value=''; valEl.value='';
+  saveState(); renderAll(); showToast('Renda adicionada! ✓');
+}
+function removeEntrada(key, id) {
+  state.pessoas[key].entradas = state.pessoas[key].entradas.filter(e=>e.id!==id);
+  saveState(); renderAll();
+}
+function renderPersonCard(key, nome) {
+  const p = state.pessoas[key];
+  const entradas = p.entradas || [];
+  const isA = key==='a';
+  const accentColor = isA ? 'var(--accent2)' : 'var(--accent3)';
+  const avatarClass = isA ? 'avatar-a' : 'avatar-b';
+  const initial = nome ? nome[0].toUpperCase() : (isA?'A':'B');
+  const total = totalPessoa(key);
+  const rows = entradas.map(e=>`
+    <div class="entrada-row">
+      <div class="entrada-desc" title="${e.desc}">${e.desc}</div>
+      <div class="entrada-value">${fmt(e.value)}</div>
+      <button class="btn btn-danger btn-icon" onclick="removeEntrada('${key}','${e.id}')">✕</button>
+    </div>`).join('');
+  return `
+    <div class="person-card">
+      <div class="person-header">
+        <div class="person-avatar ${avatarClass}">${initial}</div>
+        <div>
+          <div style="font-weight:600;font-size:15px;">${nome}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${entradas.length} fonte${entradas.length!==1?'s':''} de renda</div>
+        </div>
+      </div>
+      ${rows || `<div style="color:var(--muted);font-size:12px;padding:12px 0;text-align:center;">Nenhuma renda cadastrada</div>`}
+      <hr class="divider">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:8px;">＋ Nova fonte</div>
+      <div class="add-entrada-form">
+        <input type="text" id="entrada_desc_${key}" placeholder="Salário, VA, VT, Freelance..." onkeydown="if(event.key==='Enter') addEntrada('${key}')">
+        <input type="number" id="entrada_val_${key}" placeholder="R$ 0,00" step="50" min="0" onkeydown="if(event.key==='Enter') addEntrada('${key}')">
+        <button class="btn btn-primary btn-sm" onclick="addEntrada('${key}')">＋</button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);margin-top:12px;">
+        <span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Total</span>
+        <span style="font-family:'Playfair Display',serif;font-size:22px;color:${accentColor};">${fmt(total)}</span>
+      </div>
+    </div>`;
+}
+
+// ═══ CARTÕES ═══
+let selectedCardColor = 0;
+function selectCardColor(n) {
+  selectedCardColor = n;
+  document.querySelectorAll('#colorPicker > div').forEach((el,i)=>{
+    el.style.border = i===n ? '2px solid var(--accent)' : '2px solid transparent';
+    el.style.transform = i===n ? 'scale(1.15)' : '';
+  });
+}
+
+function openCardModal(editId=null) {
+  const modal = document.getElementById('cardModal');
+  document.getElementById('cardModalTitle').textContent = editId ? '✏️ Editar Cartão' : '💳 Novo Cartão';
+  document.getElementById('cardEditId').value = editId || '';
+  if (editId) {
+    const c = state.cartoes.find(x=>x.id===editId);
+    if (c) {
+      document.getElementById('cardName').value = c.name;
+      document.getElementById('cardBank').value = c.bank;
+      document.getElementById('cardLimit').value = c.limit || '';
+      selectedCardColor = c.colorIdx || 0;
+      selectCardColor(selectedCardColor);
+    }
+  } else {
+    document.getElementById('cardName').value = '';
+    document.getElementById('cardBank').value = '';
+    document.getElementById('cardLimit').value = '';
+    selectedCardColor = 0;
+    selectCardColor(0);
+  }
+  modal.classList.add('open');
+}
+function closeCardModal() { document.getElementById('cardModal').classList.remove('open'); }
+function saveCard() {
+  const name = document.getElementById('cardName').value.trim();
+  const bank = document.getElementById('cardBank').value.trim();
+  const limit = parseFloat(document.getElementById('cardLimit').value) || 0;
+  const editId = document.getElementById('cardEditId').value;
+  if (!name) { showToast('Informe o nome do cartão.','error'); return; }
+  if (editId) {
+    const idx = state.cartoes.findIndex(x=>x.id===editId);
+    if (idx>=0) { state.cartoes[idx] = { ...state.cartoes[idx], name, bank, limit, colorIdx: selectedCardColor }; }
+  } else {
+    state.cartoes.push({ id:'card_'+Date.now(), name, bank, limit, colorIdx: selectedCardColor });
+  }
+  saveState(); closeCardModal(); renderAll(); showToast('Cartão salvo! ✓');
+}
+function deleteCard(id) {
+  const c = state.cartoes.find(x=>x.id===id);
+  if (!c || !confirm(`Remover cartão "${c.name}"? As despesas vinculadas serão mantidas, mas sem cartão.`)) return;
+  state.cartoes = state.cartoes.filter(x=>x.id!==id);
+  state.expenses = state.expenses.map(e=> e.cardId===id ? {...e, cardId:''} : e);
+  if (state.selectedCardId===id) state.selectedCardId=null;
+  saveState(); renderAll(); showToast('Cartão removido.');
+}
+function selectCard(id) {
+  state.selectedCardId = state.selectedCardId===id ? null : id;
+  renderAll();
+}
+function cardExpensesMonth(cardId, m=currentMonth, y=currentYear) {
+  return state.expenses.filter(e=>e.cardId===cardId && e.monthYear===monthKey(m,y));
+}
+function cardTotalMonth(cardId, m=currentMonth, y=currentYear) {
+  return cardExpensesMonth(cardId,m,y).reduce((s,e)=>s+(e.value||0),0);
+}
+
+function renderCardsTab() {
+  const grid = document.getElementById('cardsGrid');
+  if (!grid) return;
+  let html = '';
+  state.cartoes.forEach(c => {
+    const used = cardTotalMonth(c.id);
+    const pct = c.limit > 0 ? Math.min(Math.round(used/c.limit*100),100) : 0;
+    const pctColor = pct < 60 ? 'var(--success)' : pct < 85 ? 'var(--warning)' : 'var(--danger)';
+    const isSelected = state.selectedCardId === c.id;
+    html += `
+      <div>
+        <div class="credit-card-visual cc-gradient-${c.colorIdx||0}" onclick="selectCard('${c.id}')" style="${isSelected?'outline:2px solid var(--accent);':''}">
+          <div class="cc-bank">${c.bank || 'Cartão'}</div>
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-limit-row">
+            <div>
+              <div class="cc-label">Usado em ${monthLabel()}</div>
+              <div class="cc-value">${fmt(used)}</div>
+              ${c.limit>0?`<div class="cc-sublabel">de ${fmt(c.limit)} (${pct}%)</div>`:'<div class="cc-sublabel">Sem limite cadastrado</div>'}
+            </div>
+          </div>
+          ${c.limit>0?`<div class="progress-bar"><div class="progress-fill" style="background:${pctColor};width:${pct}%"></div></div>`:''}
+          <div class="cc-actions">
+            <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:inherit;border:none;font-size:11px;" onclick="event.stopPropagation();openCardModal('${c.id}')">✏️ Editar</button>
+            <button class="btn btn-sm" style="background:rgba(255,80,80,.2);color:#ffa0a0;border:none;font-size:11px;" onclick="event.stopPropagation();deleteCard('${c.id}')">🗑 Remover</button>
+          </div>
+        </div>
+      </div>`;
+  });
+  html += `
+    <div class="add-card-btn" onclick="openCardModal()">
+      <div class="add-icon">➕</div>
+      <span>Adicionar Cartão</span>
+    </div>`;
+  grid.innerHTML = html;
+
+  // detalhe cartão selecionado
+  const detailSection = document.getElementById('cardDetailSection');
+  if (state.selectedCardId) {
+    const c = state.cartoes.find(x=>x.id===state.selectedCardId);
+    if (c) {
+      detailSection.style.display = '';
+      document.getElementById('cardDetailTitle').textContent = `💳 ${c.name} — ${monthLabel()}`;
+      const exps = cardExpensesMonth(c.id);
+      const total = exps.reduce((s,e)=>s+(e.value||0),0);
+      document.getElementById('cardDetailTotal').textContent = fmt(total);
+      const tbody = document.getElementById('cardExpenseBody');
+      if (!exps.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">💳</div><p>Nenhuma despesa neste cartão este mês</p></div></td></tr>`;
+      } else {
+        tbody.innerHTML = exps.sort((a,b)=>a.date<b.date?1:-1).map(e=>{
+          const ci = CAT[e.cat]||CAT.outros;
+          return `<tr>
+            <td style="color:var(--muted)">${e.date}</td>
+            <td><strong>${e.desc}</strong></td>
+            <td><span class="cat-tag ${ci.cls}">${ci.emoji} ${ci.label}</span></td>
+            <td>${e.parcelas>1?`<span class="parcela-badge">📅 ${e.parcelaAtual}/${e.parcelas}</span>`:'<span style="color:var(--muted);font-size:11px">à vista</span>'}</td>
+            <td style="text-align:right;font-weight:600">${fmt(e.value)}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')" >✕</button></td>
+          </tr>`;
+        }).join('');
+      }
+    }
+  } else {
+    detailSection.style.display = 'none';
+  }
+
+  // consolidação
+  const consolidEl = document.getElementById('consolidTable');
+  const consolidLabel = document.getElementById('consolidMonthLabel');
+  if (consolidLabel) consolidLabel.textContent = monthLabel();
+  if (consolidEl) {
+    if (!state.cartoes.length) {
+      consolidEl.innerHTML = '<div class="empty-state"><div class="empty-icon">💳</div><p>Nenhum cartão cadastrado ainda</p></div>';
+    } else {
+      let rows = '';
+      let grandTotal = 0;
+      state.cartoes.forEach(c => {
+        const used = cardTotalMonth(c.id);
+        grandTotal += used;
+        const pct = c.limit>0 ? Math.round(used/c.limit*100) : null;
+        rows += `<tr>
+          <td><strong>${c.name}</strong></td>
+          <td style="color:var(--muted);font-size:12px">${c.bank||'-'}</td>
+          <td style="text-align:right;font-weight:600;color:var(--danger)">${fmt(used)}</td>
+          <td style="text-align:right;color:var(--muted)">${c.limit>0?fmt(c.limit):'-'}</td>
+          <td style="text-align:right">${pct!==null?`<span style="color:${pct<60?'var(--success)':pct<85?'var(--warning)':'var(--danger)'};font-weight:600">${pct}%</span>`:'-'}</td>
+        </tr>`;
+      });
+      rows += `<tr style="border-top:2px solid var(--border2);">
+        <td colspan="2"><strong>TOTAL</strong></td>
+        <td style="text-align:right;font-weight:700;font-family:'Playfair Display',serif;font-size:16px;color:var(--danger)">${fmt(grandTotal)}</td>
+        <td colspan="2"></td>
+      </tr>`;
+      consolidEl.innerHTML = `<table class="expense-table">
+        <thead><tr><th>Cartão</th><th>Banco</th><th style="text-align:right">Usado</th><th style="text-align:right">Limite</th><th style="text-align:right">%</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+  }
+}
+
+// ═══ CONTAS BANCÁRIAS ═══
+function openContaModal(editId=null) {
+  const modal = document.getElementById('contaModal');
+  document.getElementById('contaModalTitle').textContent = editId ? '✏️ Editar Conta' : '🏦 Nova Conta Bancária';
+  document.getElementById('contaEditId').value = editId || '';
+  if (editId) {
+    const c = state.contas.find(x=>x.id===editId);
+    if (c) {
+      document.getElementById('contaNome').value = c.nome;
+      document.getElementById('contaBanco').value = c.banco;
+      document.getElementById('contaTipo').value = c.tipo;
+      document.getElementById('contaSaldo').value = c.saldo || '';
+    }
+  } else {
+    document.getElementById('contaNome').value = '';
+    document.getElementById('contaBanco').value = '';
+    document.getElementById('contaTipo').value = 'corrente';
+    document.getElementById('contaSaldo').value = '';
+  }
+  modal.classList.add('open');
+}
+function closeContaModal() { document.getElementById('contaModal').classList.remove('open'); }
+function saveConta() {
+  const nome = document.getElementById('contaNome').value.trim();
+  const banco = document.getElementById('contaBanco').value.trim();
+  const tipo = document.getElementById('contaTipo').value;
+  const saldo = parseFloat(document.getElementById('contaSaldo').value) || 0;
+  const editId = document.getElementById('contaEditId').value;
+  if (!nome) { showToast('Informe o nome da conta.','error'); return; }
+  if (editId) {
+    const idx = state.contas.findIndex(x=>x.id===editId);
+    if (idx>=0) state.contas[idx] = { ...state.contas[idx], nome, banco, tipo, saldo };
+  } else {
+    state.contas.push({ id:'conta_'+Date.now(), nome, banco, tipo, saldo });
+  }
+  saveState(); closeContaModal(); renderAll(); showToast('Conta salva! ✓');
+}
+function deleteConta(id) {
+  const c = state.contas.find(x=>x.id===id);
+  if (!c || !confirm(`Remover conta "${c.nome}"?`)) return;
+  state.contas = state.contas.filter(x=>x.id!==id);
+  saveState(); renderAll(); showToast('Conta removida.');
+}
+function openSaldoModal(id) {
+  const c = state.contas.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('saldoContaNome').textContent = `${c.nome} — ${c.banco}`;
+  document.getElementById('saldoContaId').value = id;
+  document.getElementById('novoSaldo').value = c.saldo || '';
+  document.getElementById('saldoModal').classList.add('open');
+}
+function closeSaldoModal() { document.getElementById('saldoModal').classList.remove('open'); }
+function saveSaldo() {
+  const id = document.getElementById('saldoContaId').value;
+  const saldo = parseFloat(document.getElementById('novoSaldo').value) || 0;
+  const idx = state.contas.findIndex(x=>x.id===id);
+  if (idx>=0) { state.contas[idx].saldo = saldo; saveState(); renderAll(); closeSaldoModal(); showToast('Saldo atualizado! ✓'); }
+}
+
+const TIPO_CONTA = { corrente:'Conta Corrente', poupanca:'Poupança', investimento:'Investimento', carteira:'Carteira Digital', outro:'Outro' };
+const CONTA_COLORS = ['#2a8040','#2a5ab0','#9a2a90','#9a6010','#2a7a90','#6a2a2a'];
+
+function renderContasTab() {
+  const grid = document.getElementById('bankAccountsGrid');
+  if (!grid) return;
+  const totalEl = document.getElementById('totalContas');
+  const breakEl = document.getElementById('contasBreakdown');
+  const total = state.contas.reduce((s,c)=>s+(c.saldo||0),0);
+  if (totalEl) totalEl.textContent = fmt(total);
+
+  let html = '';
+  state.contas.forEach((c,i) => {
+    const color = CONTA_COLORS[i % CONTA_COLORS.length];
+    html += `
+      <div class="bank-account-card" style="border-top:3px solid ${color}">
+        <div class="ba-bank">${c.banco || 'Banco'}</div>
+        <div class="ba-name">${c.nome}</div>
+        <div class="ba-balance">${fmt(c.saldo||0)}</div>
+        <div class="ba-type">${TIPO_CONTA[c.tipo]||c.tipo}</div>
+        <div class="ba-actions">
+          <button class="btn btn-success btn-sm" onclick="openSaldoModal('${c.id}')">💰 Atualizar Saldo</button>
+          <button class="btn btn-secondary btn-sm" onclick="openContaModal('${c.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteConta('${c.id}')">🗑</button>
+        </div>
+      </div>`;
+  });
+  html += `
+    <div class="bank-account-card" style="border:2px dashed var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:160px;background:none;color:var(--muted);" onclick="openContaModal()">
+      <div style="font-size:28px">➕</div>
+      <span style="font-size:13px;font-weight:600">Nova Conta</span>
+    </div>`;
+  grid.innerHTML = html;
+
+  if (breakEl && state.contas.length) {
+    breakEl.innerHTML = state.contas.map((c,i)=>{
+      const color = CONTA_COLORS[i % CONTA_COLORS.length];
+      const pct = total>0?Math.round((c.saldo||0)/total*100):0;
+      return `<div class="bar-row">
+        <div class="bar-label">${c.nome}</div>
+        <div class="bar-track"><div class="bar-fill" style="background:${color};width:${pct}%"></div></div>
+        <div class="bar-value" style="color:${color}">${fmt(c.saldo||0)}</div>
+      </div>`;
+    }).join('');
+  } else if (breakEl) {
+    breakEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏦</div><p>Nenhuma conta cadastrada</p></div>';
+  }
+}
+
+// ═══ FIXAS ═══
+function totalFixas() { return state.fixas.filter(f=>f.ativa).reduce((s,f)=>s+(f.value||0),0); }
+function renderFixasTable() {
+  const el = document.getElementById('fixasTable');
+  if (!el) return;
+  if (!state.fixas.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📌</div><p>Nenhuma despesa fixa</p></div>'; return; }
+  el.innerHTML = state.fixas.map((f,idx)=>{
+    const ci=CAT[f.cat]||CAT.outros;
+    return `<div class="fixa-row">
+      <div>
+        <div style="font-weight:500;margin-bottom:2px;">${f.desc}</div>
+        <span class="cat-tag ${ci.cls}">${ci.emoji} ${ci.label}</span>
+      </div>
+      <input type="number" value="${f.value||''}" placeholder="0,00" step="0.01" min="0" onchange="updateFixa(${idx},'value',+this.value)" style="width:130px;">
+      <select onchange="updateFixa(${idx},'cat',this.value)" style="width:150px;">
+        ${Object.entries(CAT).map(([k,v])=>`<option value="${k}" ${f.cat===k?'selected':''}>${v.emoji} ${v.label}</option>`).join('')}
+      </select>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="fixa-toggle ${f.ativa?'on':''}" onclick="toggleFixa(${idx})"></div>
+        <button class="btn btn-danger btn-sm" onclick="removeFixa(${idx})">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  const tot=document.getElementById('fixasTotal');
+  if(tot) tot.textContent=fmt(totalFixas())+'/mês';
+  const renda=totalRendaGeral(), fixTotal=totalFixas();
+  const pct=renda>0?Math.round(fixTotal/renda*100):0;
+  const impEl=document.getElementById('fixasImpact');
+  if(impEl){
+    const byCat={};
+    state.fixas.filter(f=>f.ativa).forEach(f=>{byCat[f.cat]=(byCat[f.cat]||0)+f.value;});
+    impEl.innerHTML=`
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:13px;color:var(--muted)">Fixas sobre renda</span>
+          <span style="font-weight:600;color:${pct<40?'var(--success)':pct<70?'var(--warning)':'var(--danger)'}">${fmt(fixTotal)} (${pct}%)</span>
+        </div>
+        <div class="bar-track" style="height:10px;"><div class="bar-fill" style="background:${pct<40?'var(--success)':pct<70?'var(--warning)':'var(--danger)'};width:${Math.min(pct,100)}%"></div></div>
+      </div>
+      ${Object.entries(byCat).map(([cat,val])=>{const ci=CAT[cat]||CAT.outros;return`<div class="bar-row"><div class="bar-label">${ci.emoji} ${ci.label}</div><div class="bar-track"><div class="bar-fill" style="background:var(--warning);width:${fixTotal?Math.round(val/fixTotal*100):0}%"></div></div><div class="bar-value" style="color:var(--warning)">${fmt(val)}</div></div>`;}).join('')}`;
+  }
+}
+function addFixa() {
+  const desc=document.getElementById('novaFixaDesc').value.trim();
+  const value=parseFloat(document.getElementById('novaFixaValor').value);
+  const cat=document.getElementById('novaFixaCat').value;
+  if(!desc||isNaN(value)||value<0){showToast('Preencha descrição e valor.','error');return;}
+  state.fixas.push({id:'fix_'+Date.now(),desc,value,cat,ativa:true});
+  document.getElementById('novaFixaDesc').value='';
+  document.getElementById('novaFixaValor').value='';
+  saveState();showToast('Despesa fixa adicionada! ✓');renderAll();
+}
+function updateFixa(idx,field,val){state.fixas[idx][field]=val;saveState();renderAll();}
+function toggleFixa(idx){state.fixas[idx].ativa=!state.fixas[idx].ativa;saveState();renderAll();}
+function removeFixa(idx){if(!confirm(`Remover "${state.fixas[idx].desc}"?`))return;state.fixas.splice(idx,1);saveState();renderAll();}
+
+// ═══ VARIÁVEIS ═══
+function monthExpenses(m=currentMonth,y=currentYear){return state.expenses.filter(e=>e.monthYear===monthKey(m,y));}
+function totalVariaveis(m=currentMonth,y=currentYear){return monthExpenses(m,y).reduce((s,e)=>s+(e.value||0),0);}
+
+function populateCartaoSelect(selId, selectedVal='') {
+  const el = document.getElementById(selId);
+  if (!el) return;
+  el.innerHTML = `<option value="">— Sem cartão (débito/dinheiro)</option>`;
+  state.cartoes.forEach(c => {
+    el.innerHTML += `<option value="${c.id}" ${selectedVal===c.id?'selected':''}>${c.name} (${c.bank||''})</option>`;
+  });
+}
+
+function addExpense(data=null) {
+  const desc    = data?data.desc    : document.getElementById('expDesc').value.trim();
+  const value   = data?data.value   : parseFloat(document.getElementById('expValue').value);
+  const cat     = data?(data.cat||'outros') : document.getElementById('expCat').value;
+  const parcelas= data?(data.parcelas||1) : parseInt(document.getElementById('expParcelas').value);
+  const dateStr = data?(data.date||today()) : (document.getElementById('expDate').value||today());
+  const cardId  = data?(data.cardId||'') : (document.getElementById('expCartao')?.value||'');
+  if (!desc||!value||value<=0) { showToast('Preencha descrição e valor.','error'); return; }
+  const parcelValue = value/parcelas;
+  const groupId = Date.now()+'_'+Math.random().toString(36).slice(2);
+  for (let i=1;i<=parcelas;i++) {
+    let fm=currentMonth+(i-1), fy=currentYear;
+    while(fm>11){fm-=12;fy++;}
+    state.expenses.push({id:groupId+'_'+i,groupId,desc,value:parcelValue,totalValue:value,cat,parcelas,parcelaAtual:i,date:dateStr,monthYear:monthKey(fm,fy),cardId});
+  }
+  saveState();
+  if (!data) { document.getElementById('expDesc').value=''; document.getElementById('expValue').value=''; document.getElementById('expDate').value=''; }
+  showToast('Despesa adicionada! ✓','success'); renderAll();
+}
+function deleteExpense(groupId,parcelas,desc) {
+  if (parcelas>1){if(!confirm(`Remover todas as ${parcelas} parcelas de "${desc}"?`))return;}
+  state.expenses=state.expenses.filter(e=>e.groupId!==groupId);
+  saveState();renderAll();
+}
+function renderExpensesTab() {
+  populateCartaoSelect('expCartao');
+  const cats=['all',...Object.keys(CAT)];
+  const el=document.getElementById('catFilter');
+  if(el){el.innerHTML=cats.map(c=>{
+    const active=(state.activeFilter||'all')===c;
+    const label=c==='all'?'🔹 Todas':`${CAT[c]?.emoji} ${CAT[c]?.label}`;
+    return`<div class="chip ${active?'active':''}" onclick="setFilter('${c}')">${label}</div>`;
+  }).join('');}
+  const all=monthExpenses();
+  const filtered=state.activeFilter&&state.activeFilter!=='all'?all.filter(e=>e.cat===state.activeFilter):all;
+  const countEl=document.getElementById('expenseCount');if(countEl)countEl.textContent=all.length;
+  const tbody=document.getElementById('expenseTableBody');if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🧾</div><p>Nenhuma despesa neste mês</p></div></td></tr>`;return;}
+  tbody.innerHTML=filtered.sort((a,b)=>a.date<b.date?1:-1).map(e=>{
+    const ci=CAT[e.cat]||CAT.outros;
+    const card = e.cardId ? state.cartoes.find(c=>c.id===e.cardId) : null;
+    const cardTag = card ? `<span class="card-tag" style="background:rgba(96,168,240,.15);color:var(--accent2);">💳 ${card.name}</span>` : `<span style="color:var(--muted);font-size:11px">débito/dinheiro</span>`;
+    return`<tr>
+      <td style="color:var(--muted)">${e.date}</td>
+      <td><strong>${e.desc}</strong></td>
+      <td><span class="cat-tag ${ci.cls}">${ci.emoji} ${ci.label}</span></td>
+      <td>${cardTag}</td>
+      <td>${e.parcelas>1?`<span class="parcela-badge">📅 ${e.parcelaAtual}/${e.parcelas}</span>`:'<span style="color:var(--muted);font-size:11px">à vista</span>'}</td>
+      <td style="text-align:right;font-weight:600;font-size:14px">${fmt(e.value)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.groupId}',${e.parcelas},'${e.desc.replace(/'/g,"\\'")}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function setFilter(cat){state.activeFilter=cat;renderExpensesTab();}
+
+// ═══ PDF READER ═══
+async function handlePDF(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('pdfStatus');
+  status.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted)"><div class="spinner"></div> Lendo PDF... (${(file.size/1024).toFixed(0)} KB)</div>`;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ PDF lido (${pdf.numPages} página${pdf.numPages!==1?'s':''}). Extraindo lançamentos...</div>`;
+    const items = extractTransactionsFromText(fullText);
+    renderExtracted(items, fullText);
+  } catch (err) {
+    status.innerHTML = `<div style="color:var(--danger)">Erro ao ler PDF: ${err.message}<br><small>Tente importar como imagem/print.</small></div>`;
+  }
+}
+
+// ═══ IMAGE READER ═══
+async function handleImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('imgStatus');
+  const canvas = document.getElementById('previewCanvas');
+  status.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:var(--muted)"><div class="spinner"></div> Carregando imagem...</div>`;
+  try {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.style.display = 'block';
+      // Show preview resized
+      const maxW = 500;
+      if (img.width > maxW) {
+        canvas.style.width = maxW+'px';
+        canvas.style.height = 'auto';
+      }
+      status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ Imagem carregada. Extraindo texto via OCR...</div>`;
+
+      // Use Tesseract OCR if available, otherwise parse image as data
+      if (typeof Tesseract !== 'undefined') {
+        try {
+          const result = await Tesseract.recognize(canvas, 'por', { logger: m => {} });
+          const text = result.data.text;
+          const items = extractTransactionsFromText(text);
+          renderExtracted(items, text);
+          status.innerHTML = `<div style="color:var(--success);font-size:13px">✓ OCR concluído. Confira os lançamentos abaixo.</div>`;
+        } catch (e) {
+          status.innerHTML = `<div style="color:var(--warning);font-size:13px">⚠ OCR falhou. Adicione os lançamentos manualmente abaixo.</div>`;
+          renderExtracted([], '');
+        }
+      } else {
+        // No OCR available — show manual entry with empty rows
+        status.innerHTML = `<div style="color:var(--warning);font-size:13px">⚠ OCR não disponível. Visualize a imagem e adicione os lançamentos manualmente abaixo.</div>`;
+        renderExtracted([], '');
+      }
+    };
+    img.src = url;
+  } catch (err) {
+    status.innerHTML = `<div style="color:var(--danger)">Erro: ${err.message}</div>`;
+  }
+}
+
+// ═══ SMART TEXT EXTRACTION ═══
+function extractTransactionsFromText(text) {
+  const lines = text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+  const results = [];
+
+  // Blacklist lines
+  const skipWords = ['pagamento','fatura','total','limite','vencimento','saldo','anterior','iof','juros','encargo','rotativo','parcelado em','disponivel','disponível','crédito disponível','CRÉDITO DISPONÍVEL','cpf','cnpj','extrato','conta corrente','agência'];
+
+  // Patterns for money values
+  const moneyRe = /R?\$?\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2})|(\d+),(\d{2}))/g;
+
+  // Date patterns
+  const dateRe = /(\d{2})[\/\-](\d{2})(?:[\/\-](\d{2,4}))?/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lower = line.toLowerCase();
+
+    // Skip blacklisted
+    if (skipWords.some(w => lower.includes(w))) continue;
+
+    // Find money values
+    const moneyMatches = [...line.matchAll(moneyRe)];
+    if (!moneyMatches.length) continue;
+
+    // Get the last money value as value (usually the amount column)
+    const lastMoney = moneyMatches[moneyMatches.length-1];
+    const rawVal = lastMoney[1].replace(/\./g,'').replace(',','.');
+    const value = parseFloat(rawVal);
+    if (!value || value <= 0 || value > 99999) continue;
+
+    // Description: everything before the money
+    let desc = line.substring(0, lastMoney.index).trim();
+    // Remove dates from description
+    desc = desc.replace(/\d{2}\/\d{2}(\/\d{2,4})?/g,'').trim();
+    // Remove leading/trailing special chars
+    desc = desc.replace(/^[\s\-\|:]+|[\s\-\|:]+$/g,'').trim();
+    if (desc.length < 2) continue;
+
+    // Try to find date
+    let date = today();
+    const dateMatch = line.match(dateRe);
+    if (dateMatch) {
+      const d = dateMatch[1], m = dateMatch[2];
+      let y = dateMatch[3];
+      if (!y) y = String(currentYear);
+      if (y.length === 2) y = '20'+y;
+      date = `${d}/${m}/${y}`;
+    }
+
+    // Detect installments e.g. "02/06" or "Parcela 2 de 6"
+    let parcelas = 1, parcelaAtual = 1;
+    const parcRe = /(\d{1,2})\s*[\/de]+\s*(\d{1,2})/i;
+    const parcMatch = line.match(parcRe);
+    if (parcMatch) {
+      parcelaAtual = parseInt(parcMatch[1]);
+      parcelas = parseInt(parcMatch[2]);
+      if (parcelaAtual > parcelas) { parcelaAtual=1; parcelas=1; }
+    }
+
+    // Auto-categorize
+    const cat = autoCategorize(desc + ' ' + line);
+
+    results.push({ desc, value, cat, date, parcelas, parcelaAtual });
+  }
+
+  return results;
+}
+
+function autoCategorize(text) {
+  const t = text.toLowerCase();
+  if (/posto|shell|ipiranga|petrobras|combustiv|gasolina|etanol|diesel|br mania/i.test(t)) return 'combustivel';
+  if (/mercado|carrefour|extra|pão de açúcar|hortifruti|açougue|padaria|supermercado|atacado|atacadão|sams club|sam's/i.test(t)) return 'alimentacao';
+  if (/restaurante|lanchonete|mc donalds|mcdonalds|burger|subway|pizza|ifood|rappi|delivery|bar |churrascaria|sushi|hamburguer|café |cafeteria/i.test(t)) return 'alimentacao';
+  if (/uber|99|taxi|ônibus|metro|passagem|pedágio|pedagio|estacionamento|park/i.test(t)) return 'transporte';
+  if (/raia|drogasil|ultrafarma|farmácia|farmacia|droga|drogaria|remédio|remedio|médico|medico|dentista|clínica|clinica|saúde|saude|unimed|amil|bradesco saude|hospital/i.test(t)) return 'saude';
+  if (/petfarma|paradapet|petlove|cobasi|pet shop|veterin|ração|racao|animal|bicho|pata/i.test(t)) return 'pet';
+  if (/cinema|show|teatro|ingresso|spotify|netflix|prime|disney|hbo|youtube premium|play|game|shopee|shein|aliexpress|presente|viagem|hotel|airbnb/i.test(t)) return 'lazer';
+  if (/aluguel|condominio|condomínio|energia|água|agua|internet|luz|gás|gas|reforma|material de construção|imobiliaria|imobiliária/i.test(t)) return 'moradia';
+  if (/faculdade|curso|escola|universidade|livro|papelaria|educação|educacao|udemy|alura/i.test(t)) return 'educacao';
+  if (/seguro|assinatura|mensalidade|plano|serviço|servico|telefone|celular|tim|vivo|claro|oi /i.test(t)) return 'servicos';
+  return 'outros';
+}
+
+// ═══ RENDER EXTRACTED ═══
+let _extractedItems = [];
+function renderExtracted(items, rawText) {
+  _extractedItems = items.map((it,i)=>({...it, _idx:i}));
+  const area = document.getElementById('extractedArea');
+  const cartaoSel = document.getElementById('faturaCartaoSelect');
+  if (cartaoSel) {
+    cartaoSel.style.display = '';
+    populateCartaoSelect('faturaCartaoId');
+  }
+
+  if (!area) return;
+  if (!items.length) {
+    area.innerHTML = `
+      <div class="card mb-20">
+        <div class="card-title"><div class="dot" style="background:var(--warning)"></div> Nenhum lançamento extraído automaticamente</div>
+        <div class="info-box mb-16" style="margin-bottom:14px;">Não foi possível extrair lançamentos. Adicione manualmente abaixo ou tente outro arquivo.</div>
+        <div id="manualExtractRows"></div>
+        <button class="btn btn-secondary btn-sm" onclick="addManualRow()" style="margin-top:10px;">＋ Adicionar linha</button>
+        <div style="margin-top:14px;"><button class="btn btn-primary" onclick="importExtracted()">✓ Importar Todos</button></div>
+      </div>`;
+    return;
+  }
+
+  area.innerHTML = `
+    <div class="card mb-20">
+      <div class="card-title"><div class="dot" style="background:var(--success)"></div> ${items.length} lançamento${items.length!==1?'s':''} encontrado${items.length!==1?'s':''} — revise antes de importar</div>
+      <div class="scroll-table">
+        <table class="expense-table">
+          <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Parc.</th><th style="text-align:right">Valor (R$)</th><th></th></tr></thead>
+          <tbody id="extractedBody">${renderExtractedRows()}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="importExtracted()">✓ Importar Todos (${items.length})</button>
+        <button class="btn btn-secondary btn-sm" onclick="addManualRow()">＋ Linha manual</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('extractedArea').innerHTML='';document.getElementById('faturaCartaoSelect').style.display='none'">Fechar</button>
+        <span style="color:var(--muted);font-size:12px">Total: <strong style="color:var(--text)">${fmt(items.reduce((s,i)=>s+i.value,0))}</strong></span>
+      </div>
+    </div>`;
+}
+
+function renderExtractedRows() {
+  return _extractedItems.map((it,idx)=>`
+    <tr id="extrow_${idx}">
+      <td><input type="text" value="${it.date}" onchange="_extractedItems[${idx}].date=this.value" style="width:100px;font-size:12px;"></td>
+      <td><input type="text" value="${it.desc}" onchange="_extractedItems[${idx}].desc=this.value" style="min-width:180px;font-size:12px;"></td>
+      <td>
+        <select onchange="_extractedItems[${idx}].cat=this.value" style="font-size:12px;min-width:120px;">
+          ${Object.entries(CAT).map(([k,v])=>`<option value="${k}" ${it.cat===k?'selected':''}>${v.emoji} ${v.label}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="number" value="${it.parcelas}" min="1" max="36" onchange="_extractedItems[${idx}].parcelas=+this.value" style="width:55px;font-size:12px;text-align:center;"></td>
+      <td><input type="number" value="${it.value.toFixed(2)}" step="0.01" min="0" onchange="_extractedItems[${idx}].value=+this.value" style="width:110px;font-size:12px;text-align:right;"></td>
+      <td>
+        <button class="btn btn-success btn-sm" onclick="importSingleExtracted(${idx})" title="Importar só este">↓</button>
+        <button class="btn btn-danger btn-sm" onclick="removeExtractedRow(${idx})" title="Remover">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function addManualRow() {
+  _extractedItems.push({ desc:'', value:0, cat:'outros', date:today(), parcelas:1, parcelaAtual:1 });
+  const tbody = document.getElementById('extractedBody');
+  if (tbody) tbody.innerHTML = renderExtractedRows();
+  else renderExtracted(_extractedItems, '');
+}
+function removeExtractedRow(idx) {
+  _extractedItems.splice(idx,1);
+  const tbody = document.getElementById('extractedBody');
+  if (tbody) tbody.innerHTML = renderExtractedRows();
+}
+function importSingleExtracted(idx) {
+  const it = _extractedItems[idx];
+  if (!it.desc||!it.value) { showToast('Preencha descrição e valor.','error'); return; }
+  const cardId = document.getElementById('faturaCartaoId')?.value||'';
+  addExpense({desc:it.desc, value:it.value*(it.parcelas||1), cat:it.cat, parcelas:it.parcelas||1, date:it.date, cardId});
+  document.getElementById(`extrow_${idx}`)?.remove();
+  _extractedItems.splice(idx,1);
+  showToast(`"${it.desc}" importado!`,'success');
+}
+function importExtracted() {
+  const cardId = document.getElementById('faturaCartaoId')?.value||'';
+  let count=0;
+  _extractedItems.forEach(it=>{
+    if (!it.desc||!it.value) return;
+    addExpense({desc:it.desc, value:it.value*(it.parcelas||1), cat:it.cat, parcelas:it.parcelas||1, date:it.date, cardId});
+    count++;
+  });
+  document.getElementById('extractedArea').innerHTML=`
+    <div class="card mb-20" style="border-color:var(--success)">
+      <div class="card-title" style="color:var(--success)">✓ ${count} lançamento${count!==1?'s':''} importado${count!==1?'s':''}!</div>
+      <div style="color:var(--muted);font-size:13px">Veja em <strong style="color:var(--text)">Variáveis</strong> e <strong style="color:var(--text)">Cartões</strong>.</div>
+    </div>`;
+  document.getElementById('faturaCartaoSelect').style.display='none';
+  showToast(`${count} lançamentos importados!`,'success');
+}
+
+// ═══ PREVISÃO ═══
+function renderForecast() {
+  const el=document.getElementById('forecastContent');if(!el)return;
+  const renda=totalRendaGeral(),fixas=totalFixas();let html='';
+  for(let i=1;i<=6;i++){
+    let m=currentMonth+i,y=currentYear;while(m>11){m-=12;y++;}
+    const variaveis=totalVariaveis(m,y),total=fixas+variaveis;
+    const pct=renda>0?Math.round(total/renda*100):0;
+    const color=pct<50?'var(--success)':pct<80?'var(--warning)':'var(--danger)';
+    html+=`<div class="forecast-month">
+      <div class="forecast-month-header">
+        <span class="forecast-month-title">${monthLabel(m,y)}</span>
+        <span style="color:${color};font-weight:700">${fmt(total)} <span style="font-size:11px;color:var(--muted)">(${pct}%)</span></span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);margin-bottom:8px;">
+        <span>📌 Fixas: <strong style="color:var(--warning)">${fmt(fixas)}</strong></span>
+        <span>💳 Variáveis: <strong style="color:var(--danger)">${fmt(variaveis)}</strong></span>
+        <span>💰 Renda: <strong style="color:var(--success)">${fmt(renda)}</strong></span>
+        <span>✅ Saldo: <strong style="color:${renda-total>=0?'var(--success)':'var(--danger)'}">${fmt(renda-total)}</strong></span>
+      </div>
+      <div class="bar-track" style="height:10px;"><div class="bar-fill" style="background:${color};width:${Math.min(pct,100)}%"></div></div>
+    </div>`;
+  }
+  el.innerHTML=html||'<div class="empty-state"><p>Sem dados para previsão.</p></div>';
+  const fixasEl=document.getElementById('forecastFixas');
+  if(fixasEl){fixasEl.innerHTML=state.fixas.filter(f=>f.ativa).map(f=>{const ci=CAT[f.cat]||CAT.outros;return`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(37,44,66,.5);"><span>${ci.emoji} ${f.desc}</span><span style="font-weight:600;color:var(--warning)">${fmt(f.value)}</span></div>`;}).join('')||'<div style="color:var(--muted);font-size:13px;padding:12px 0">Nenhuma despesa fixa ativa</div>';}
+}
+function renderInstallments() {
+  const tbody=document.getElementById('installmentsBody');if(!tbody)return;
+  const future=state.expenses.filter(e=>{const[y,m]=e.monthYear.split('-').map(Number);return e.parcelas>1&&(y*12+(m-1))>(currentYear*12+currentMonth);});
+  if(!future.length){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:28px;color:var(--muted)">Nenhuma parcela futura</td></tr>';return;}
+  const groups={};future.forEach(e=>{if(!groups[e.groupId])groups[e.groupId]={desc:e.desc,value:e.value,items:[]};groups[e.groupId].items.push(e);});
+  tbody.innerHTML=Object.values(groups).map(g=>`<tr><td><strong>${g.desc}</strong></td><td style="color:var(--accent2)">${fmt(g.value)}/mês</td><td><span class="parcela-badge">${g.items.length}x restantes</span></td></tr>`).join('');
+}
+
+// ═══ DASHBOARD ═══
+function renderSummary() {
+  const n1=state.casal.nome1||'Você', n2=state.casal.nome2||'Cônjuge';
+  const renda=totalRendaGeral(), fixas=totalFixas(), variaveis=totalVariaveis();
+  const total=fixas+variaveis, saldo=renda-total;
+  const totalContas=state.contas.reduce((s,c)=>s+(c.saldo||0),0);
+  let nm=currentMonth+1,ny=currentYear; if(nm>11){nm=0;ny++;}
+  const proxMes=totalFixas()+totalVariaveis(nm,ny);
+  document.getElementById('summaryCards').innerHTML=`
+    <div class="sum-card renda"><div class="sum-label">Renda Total</div><div class="sum-value">${fmt(renda)}</div><div class="sum-sub">${n1} + ${n2}</div></div>
+    <div class="sum-card fixas"><div class="sum-label">Despesas Fixas</div><div class="sum-value">${fmt(fixas)}</div><div class="sum-sub">${state.fixas.filter(f=>f.ativa).length} itens ativos</div></div>
+    <div class="sum-card despesa"><div class="sum-label">Variáveis ${monthLabel()}</div><div class="sum-value">${fmt(variaveis)}</div><div class="sum-sub">${renda>0?Math.round(total/renda*100):0}% comprometido</div></div>
+    <div class="sum-card saldo"><div class="sum-label">Saldo do Mês</div><div class="sum-value">${fmt(saldo)}</div><div class="sum-sub" style="color:${saldo>=0?'var(--success)':'var(--danger)'}">${saldo>=0?'✓ Positivo':'⚠ Negativo'}</div></div>
+    <div class="sum-card contas"><div class="sum-label">Em Contas</div><div class="sum-value">${fmt(totalContas)}</div><div class="sum-sub">${state.contas.length} conta${state.contas.length!==1?'s':''}</div></div>
+    <div class="sum-card previsao"><div class="sum-label">Previsão Próx. Mês</div><div class="sum-value">${fmt(proxMes)}</div><div class="sum-sub">${monthLabel(nm,ny)}</div></div>`;
+}
+function renderIncomeTab() {
+  const n1=state.casal.nome1||'Você', n2=state.casal.nome2||'Cônjuge';
+  const grid=document.getElementById('incomeGrid');if(!grid)return;
+  grid.innerHTML=renderPersonCard('a',n1)+renderPersonCard('b',n2);
+  const total=totalRendaGeral();
+  document.getElementById('combinedIncome').textContent=fmt(total);
+  const allEntradas=[...state.pessoas.a.entradas,...state.pessoas.b.entradas];
+  const byDesc={};allEntradas.forEach(e=>{byDesc[e.desc]=(byDesc[e.desc]||0)+(e.value||0);});
+  const pills=Object.entries(byDesc).filter(([,v])=>v>0).map(([desc,val])=>
+    `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:var(--surface3);border-radius:20px;font-size:12px;margin:3px;">
+      <strong style="color:var(--success)">${fmt(val)}</strong>
+      <span style="color:var(--muted)">${desc}</span>
+    </span>`).join('');
+  document.getElementById('combinedSub').innerHTML=pills||'<span style="color:var(--muted)">Cadastre as rendas acima</span>';
+}
+function renderDashboard() {
+  const n1=state.casal.nome1||'Você', n2=state.casal.nome2||'Cônjuge';
+  const total=totalRendaGeral();
+  const incItems=[];
+  const colors_a=['#5090d8','#f0c060','#5de8a8','#a898ff','#f0b840','#70d8f0'];
+  const colors_b=['#c05890','#f07860','#60f0a8','#d870a8','#a8b060','#c890f0'];
+  state.pessoas.a.entradas.filter(e=>e.value>0).forEach((e,i)=>{incItems.push({label:`${n1} — ${e.desc}`,val:e.value,color:colors_a[i%colors_a.length]});});
+  state.pessoas.b.entradas.filter(e=>e.value>0).forEach((e,i)=>{incItems.push({label:`${n2} — ${e.desc}`,val:e.value,color:colors_b[i%colors_b.length]});});
+  const incEl=document.getElementById('incomeBreakdown');
+  if(incEl){incEl.innerHTML=incItems.length?incItems.map(i=>`<div class="bar-row"><div class="bar-label">${i.label}</div><div class="bar-track"><div class="bar-fill" style="background:${i.color};width:${total?Math.round(i.val/total*100):0}%"></div></div><div class="bar-value" style="color:${i.color}">${fmt(i.val)}</div></div>`).join(''):'<div class="empty-state"><div class="empty-icon">📊</div><p>Cadastre sua renda na aba <strong>Renda</strong></p></div>';}
+  const exps=monthExpenses();
+  const byCat={};
+  state.fixas.filter(f=>f.ativa).forEach(f=>{byCat[f.cat]=(byCat[f.cat]||0)+f.value;});
+  exps.forEach(e=>{byCat[e.cat]=(byCat[e.cat]||0)+e.value;});
+  const totalExp=Object.values(byCat).reduce((s,v)=>s+v,0);
+  const expEl=document.getElementById('expenseBreakdown');
+  if(expEl){expEl.innerHTML=Object.keys(byCat).length?Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>{const ci=CAT[cat]||CAT.outros;return`<div class="bar-row"><div class="bar-label">${ci.emoji} ${ci.label}</div><div class="bar-track"><div class="bar-fill" style="background:var(--danger);width:${totalExp?Math.round(val/totalExp*100):0}%"></div></div><div class="bar-value" style="color:var(--danger)">${fmt(val)}</div></div>`;}).join(''):'<div class="empty-state"><div class="empty-icon">🧾</div><p>Nenhuma despesa neste mês</p></div>';}
+
+  // Dashboard cartões
+  const dashCartoes=document.getElementById('dashCartoes');
+  if(dashCartoes){
+    if(!state.cartoes.length){dashCartoes.innerHTML='<div class="empty-state"><div class="empty-icon">💳</div><p>Nenhum cartão cadastrado</p></div>';}
+    else{dashCartoes.innerHTML=state.cartoes.map(c=>{const used=cardTotalMonth(c.id);const pct=c.limit>0?Math.min(Math.round(used/c.limit*100),100):0;const color=pct<60?'var(--success)':pct<85?'var(--warning)':'var(--danger)';return`<div style="padding:10px 0;border-bottom:1px solid rgba(37,44,66,.5);">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:500">${c.name}</span><span style="font-weight:600;color:var(--danger)">${fmt(used)}</span></div>
+      ${c.limit>0?`<div class="progress-bar"><div class="progress-fill" style="background:${color};width:${pct}%"></div></div><div style="font-size:11px;color:var(--muted);text-align:right;margin-top:3px;">${pct}% de ${fmt(c.limit)}</div>`:'<div style="font-size:11px;color:var(--muted)">Sem limite configurado</div>'}
+    </div>`;}).join('');}
+  }
+
+  // Dashboard contas
+  const dashContas=document.getElementById('dashContas');
+  if(dashContas){
+    const totalC=state.contas.reduce((s,c)=>s+(c.saldo||0),0);
+    if(!state.contas.length){dashContas.innerHTML='<div class="empty-state"><div class="empty-icon">🏦</div><p>Nenhuma conta cadastrada</p></div>';}
+    else{dashContas.innerHTML=state.contas.map((c,i)=>{const color=CONTA_COLORS[i%CONTA_COLORS.length];return`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(37,44,66,.5);"><div><div style="font-weight:500">${c.nome}</div><div style="font-size:11px;color:var(--muted)">${c.banco} · ${TIPO_CONTA[c.tipo]||c.tipo}</div></div><span style="font-family:'Playfair Display',serif;font-size:16px;color:${color};">${fmt(c.saldo||0)}</span></div>`;}).join('')+`<div style="padding-top:12px;display:flex;justify-content:space-between;"><strong>Total</strong><strong style="color:var(--accent4)">${fmt(totalC)}</strong></div>`;}
+  }
+
+  const recent=[...exps].slice(0,8);
+  const recentEl=document.getElementById('recentExpenses');
+  if(recentEl){
+    if(!recent.length){recentEl.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--muted)">Nenhuma despesa variável este mês</td></tr>';return;}
+    recentEl.innerHTML=`<thead><tr><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Tipo</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>${recent.map(e=>{const ci=CAT[e.cat]||CAT.outros;const card=e.cardId?state.cartoes.find(c=>c.id===e.cardId):null;return`<tr>
+        <td><strong>${e.desc}</strong></td>
+        <td><span class="cat-tag ${ci.cls}">${ci.emoji} ${ci.label}</span></td>
+        <td>${card?`<span class="card-tag" style="background:rgba(96,168,240,.12);color:var(--accent2)">💳 ${card.name}</span>`:`<span style="color:var(--muted);font-size:11px">—</span>`}</td>
+        <td>${e.parcelas>1?`<span class="parcela-badge">📅 ${e.parcelaAtual}/${e.parcelas}</span>`:'<span style="color:var(--muted);font-size:11px">à vista</span>'}</td>
+        <td style="text-align:right;font-weight:600">${fmt(e.value)}</td>
+      </tr>`;}).join('')}</tbody>`;
+  }
+}
+
+// ═══ CASAL MODAL ═══
+function openCasalModal(){
+  document.getElementById('modalNome1').value=state.casal.nome1||'';
+  document.getElementById('modalNome2').value=state.casal.nome2||'';
+  document.getElementById('casalModal').classList.add('open');
+}
+function closeCasalModal(){document.getElementById('casalModal').classList.remove('open');}
+function saveCasal(){
+  const n1=document.getElementById('modalNome1').value.trim()||'Você';
+  const n2=document.getElementById('modalNome2').value.trim()||'Cônjuge';
+  state.casal={nome1:n1,nome2:n2};
+  saveState();closeCasalModal();renderAll();showToast('Nomes atualizados! ✓');
+}
+
+// ═══ RENDER ALL ═══
+function renderAll(){
+  const n1=state.casal.nome1||'Você', n2=state.casal.nome2||'Cônjuge';
+  document.getElementById('logoCasal').textContent=`${n1} & ${n2} ✎`;
+  document.getElementById('currentMonthLabel').textContent=monthLabel();
+  renderSummary();renderIncomeTab();renderFixasTable();renderExpensesTab();renderDashboard();renderForecast();renderInstallments();renderCardsTab();renderContasTab();
+}
+
+// ═══ TOAST ═══
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ═══ DRAG & DROP ═══
+['pdfUpload','imgUpload'].forEach(id=>{
+  const el=document.getElementById(id);if(!el)return;
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('dragover');});
+  el.addEventListener('dragleave',()=>el.classList.remove('dragover'));
+  el.addEventListener('drop',e=>{
+    e.preventDefault();el.classList.remove('dragover');
+    const file=e.dataTransfer.files[0];if(!file)return;
+    if(id==='pdfUpload'&&file.type==='application/pdf'){const dt=new DataTransfer();dt.items.add(file);document.getElementById('pdfInput').files=dt.files;handlePDF(document.getElementById('pdfInput'));}
+    else if(id==='imgUpload'&&file.type.startsWith('image/')){const dt=new DataTransfer();dt.items.add(file);document.getElementById('imgInput').files=dt.files;handleImage(document.getElementById('imgInput'));}
+  });
+});
+
+// Close modals on backdrop click
+['casalModal','cardModal','contaModal','saldoModal'].forEach(id=>{
+  const el=document.getElementById(id);if(el)el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+});
+
+// ═══ INIT ═══
+selectCardColor(0);
+renderAll();
+</script>
+</body>
+</html>
