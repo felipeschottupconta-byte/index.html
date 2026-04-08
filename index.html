@@ -6,6 +6,9 @@
 <title>Finanças do Casal</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <style>
 :root {
   --bg: #0c0e14;
@@ -503,11 +506,15 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; 
 
 <!-- PREVISÃO -->
 <div class="tab-content" id="tab-previsao">
+  <div class="summary-grid" id="forecastKpis" style="margin-bottom: 20px;"></div>
+  
   <div class="card mb-20">
-    <div class="card-title"><div class="dot" style="background:var(--accent2)"></div> Previsão dos Próximos 6 Meses</div>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Inclui despesas fixas + parcelas em aberto de todas as compras.</p>
-    <div id="forecastContent"></div>
+    <div class="card-title"><div class="dot" style="background:var(--accent2)"></div> Projeção dos Próximos 6 Meses</div>
+    <div style="position: relative; height: 320px; width: 100%;">
+      <canvas id="forecastChart"></canvas>
+    </div>
   </div>
+  
   <div class="two-col">
     <div class="card">
       <div class="card-title"><div class="dot" style="background:var(--warning)"></div> Fixas Todo Mês</div>
@@ -658,6 +665,21 @@ let currentMonth = new Date().getMonth();
 let currentYear  = new Date().getFullYear();
 
 // ═══ STATE ═══
+// ═══ FIREBASE SETUP E STATE ═══
+const firebaseConfig = {
+  apiKey: "AIzaSyBqdiSPQBn8H283_aNv7s7qjuqU-OgpYXs",
+  authDomain: "financas-do-casal-ae268.firebaseapp.com",
+  projectId: "financas-do-casal-ae268",
+  storageBucket: "financas-do-casal-ae268.firebasestorage.app",
+  messagingSenderId: "36752509158",
+  appId: "1:36752509158:web:0eecd7d72761b8d4989327",
+  databaseURL: "https://financas-do-casal-ae268-default-rtdb.firebaseio.com"
+};
+
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
 const DEFAULT_STATE = {
   casal: { nome1: 'Felipe', nome2: 'Ana' },
   pessoas: {
@@ -685,23 +707,35 @@ const DEFAULT_STATE = {
   selectedCardColor: 0
 };
 
+// Carrega primeiro o local para a tela não piscar em branco
 function loadState() {
   try {
     const s = localStorage.getItem('financasCasal_v4');
-    if (s) return JSON.parse(s);
-    // migrate from old version
-    const old = localStorage.getItem('financasCasal_v3');
-    if (old) {
-      const o = JSON.parse(old);
-      return { ...DEFAULT_STATE, ...o, cartoes: [], contas: [] };
-    }
-    return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_STATE));
   } catch { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
 }
-function saveState() { localStorage.setItem('financasCasal_v4', JSON.stringify(state)); }
+
 let state = loadState();
 if (!state.cartoes) state.cartoes = [];
 if (!state.contas) state.contas = [];
+
+// Fica escutando a nuvem. Se alguém mexer em outro celular, atualiza aqui na hora!
+database.ref('financas_casal').on('value', (snapshot) => {
+  const cloudState = snapshot.val();
+  if (cloudState) {
+    state = cloudState;
+    if (!state.cartoes) state.cartoes = [];
+    if (!state.contas) state.contas = [];
+    localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
+    renderAll(); 
+  }
+});
+
+// Salva localmente e envia para a nuvem
+function saveState() {
+  localStorage.setItem('financasCasal_v4', JSON.stringify(state)); 
+  database.ref('financas_casal').set(state); 
+}
 
 // ═══ MÊS ═══
 function changeMonth(dir) {
@@ -1442,31 +1476,98 @@ function importExtracted() {
 }
 
 // ═══ PREVISÃO ═══
+let forecastChartInstance = null;
+
 function renderForecast() {
-  const el=document.getElementById('forecastContent');if(!el)return;
-  const renda=totalRendaGeral(),fixas=totalFixas();let html='';
-  for(let i=1;i<=6;i++){
-    let m=currentMonth+i,y=currentYear;while(m>11){m-=12;y++;}
-    const variaveis=totalVariaveis(m,y),total=fixas+variaveis;
-    const pct=renda>0?Math.round(total/renda*100):0;
-    const color=pct<50?'var(--success)':pct<80?'var(--warning)':'var(--danger)';
-    html+=`<div class="forecast-month">
-      <div class="forecast-month-header">
-        <span class="forecast-month-title">${monthLabel(m,y)}</span>
-        <span style="color:${color};font-weight:700">${fmt(total)} <span style="font-size:11px;color:var(--muted)">(${pct}%)</span></span>
-      </div>
-      <div style="display:flex;gap:12px;font-size:12px;color:var(--muted);margin-bottom:8px;">
-        <span>📌 Fixas: <strong style="color:var(--warning)">${fmt(fixas)}</strong></span>
-        <span>💳 Variáveis: <strong style="color:var(--danger)">${fmt(variaveis)}</strong></span>
-        <span>💰 Renda: <strong style="color:var(--success)">${fmt(renda)}</strong></span>
-        <span>✅ Saldo: <strong style="color:${renda-total>=0?'var(--success)':'var(--danger)'}">${fmt(renda-total)}</strong></span>
-      </div>
-      <div class="bar-track" style="height:10px;"><div class="bar-fill" style="background:${color};width:${Math.min(pct,100)}%"></div></div>
-    </div>`;
+  const renda = totalRendaGeral();
+  const fixas = totalFixas();
+  
+  let labels = [];
+  let dataFixas = [];
+  let dataVariaveis = [];
+  let dataRenda = [];
+  
+  let proxMesTotal = 0;
+
+  for(let i=1; i<=6; i++){
+    let m = currentMonth + i, y = currentYear;
+    while(m > 11){ m -= 12; y++; }
+    
+    const variaveis = totalVariaveis(m, y);
+    const total = fixas + variaveis;
+    
+    if (i === 1) proxMesTotal = total;
+
+    labels.push(monthLabel(m,y));
+    dataFixas.push(fixas);
+    dataVariaveis.push(variaveis);
+    dataRenda.push(renda);
   }
-  el.innerHTML=html||'<div class="empty-state"><p>Sem dados para previsão.</p></div>';
-  const fixasEl=document.getElementById('forecastFixas');
-  if(fixasEl){fixasEl.innerHTML=state.fixas.filter(f=>f.ativa).map(f=>{const ci=CAT[f.cat]||CAT.outros;return`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(37,44,66,.5);"><span>${ci.emoji} ${f.desc}</span><span style="font-weight:600;color:var(--warning)">${fmt(f.value)}</span></div>`;}).join('')||'<div style="color:var(--muted);font-size:13px;padding:12px 0">Nenhuma despesa fixa ativa</div>';}
+
+  const kpisEl = document.getElementById('forecastKpis');
+  if(kpisEl) {
+    kpisEl.innerHTML = `
+      <div class="sum-card renda"><div class="sum-label">Renda Estável</div><div class="sum-value">${fmt(renda)}</div><div class="sum-sub">Base mensal projetada</div></div>
+      <div class="sum-card fixas"><div class="sum-label">Custo Fixo Projetado</div><div class="sum-value">${fmt(fixas)}</div><div class="sum-sub">O que não muda</div></div>
+      <div class="sum-card previsao"><div class="sum-label">Próximo Mês (Total)</div><div class="sum-value">${fmt(proxMesTotal)}</div><div class="sum-sub">Fixas + Parcelas já assumidas</div></div>
+    `;
+  }
+
+  const ctx = document.getElementById('forecastChart');
+  if(ctx) {
+    if(forecastChartInstance) forecastChartInstance.destroy(); 
+    
+    forecastChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            type: 'line',
+            label: 'Renda Combinada',
+            data: dataRenda,
+            borderColor: '#5de8a8',
+            backgroundColor: '#5de8a8',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.3
+          },
+          {
+            label: 'Despesas Fixas',
+            data: dataFixas,
+            backgroundColor: 'rgba(240, 184, 64, 0.8)',
+            borderRadius: 4
+          },
+          {
+            label: 'Parcelas Variáveis',
+            data: dataVariaveis,
+            backgroundColor: 'rgba(240, 112, 112, 0.8)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { color: 'rgba(37, 44, 66, 0.3)' }, ticks: { color: '#8890b0' } },
+          y: { stacked: true, grid: { color: 'rgba(37, 44, 66, 0.3)' }, ticks: { color: '#8890b0' } }
+        },
+        plugins: {
+          legend: { labels: { color: '#e8eaf6' } }
+        }
+      }
+    });
+  }
+
+  const fixasEl = document.getElementById('forecastFixas');
+  if(fixasEl){
+    fixasEl.innerHTML = state.fixas.filter(f=>f.ativa).map(f=>{
+      const ci=CAT[f.cat]||CAT.outros;
+      return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(37,44,66,.5);"><span>${ci.emoji} ${f.desc}</span><span style="font-weight:600;color:var(--warning)">${fmt(f.value)}</span></div>`;
+    }).join('')||'<div style="color:var(--muted);font-size:13px;padding:12px 0">Nenhuma despesa fixa ativa</div>';
+  }
 }
 function renderInstallments() {
   const tbody=document.getElementById('installmentsBody');if(!tbody)return;
