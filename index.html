@@ -719,6 +719,25 @@ hr.divider{border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0
   .cards-grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
   .forecast-months-grid{grid-template-columns:repeat(3,1fr);}
 }
+  /* PIX */
+.pix-list{margin-top:14px;border-top:1px solid rgba(255,255,255,0.05);padding-top:12px;}
+.pix-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.pix-item:last-child{border-bottom:none;}
+.pix-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.pix-icon.enviado{background:rgba(224,85,85,.15);color:var(--danger);}
+.pix-icon.recebido{background:rgba(78,207,160,.15);color:var(--success);}
+.pix-desc{flex:1;font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pix-date{font-size:10px;color:var(--muted);flex-shrink:0;}
+.pix-value{font-size:13px;font-weight:700;flex-shrink:0;}
+.pix-value.enviado{color:var(--danger);}
+.pix-value.recebido{color:var(--success);}
+.pix-summary{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.pix-sum-box{flex:1;min-width:90px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:10px 12px;}
+.pix-sum-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px;}
+.pix-sum-value{font-family:'Instrument Serif',serif;font-size:16px;font-weight:400;}
+.pix-history-wrap{max-height:240px;overflow-y:auto;margin-top:8px;}
+.pix-history-wrap::-webkit-scrollbar{width:3px;}
+.pix-history-wrap::-webkit-scrollbar-thumb{background:var(--border2);}
 </style>
 </head>
 <body>
@@ -1192,6 +1211,38 @@ hr.divider{border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0
   </div>
 </div>
 
+  <!-- PIX MODAL -->
+<div class="modal-backdrop" id="pixModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title" id="pixModalTitle">💸 Lançar PIX</div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Conta Bancária</label>
+      <select id="pixContaId"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Tipo</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.2);border-radius:10px;cursor:pointer;">
+          <input type="radio" name="pixTipo" value="enviado" id="pixTipoEnviado" checked style="width:auto;accent-color:var(--danger);">
+          <span style="font-size:13px;font-weight:600;color:var(--danger);">↑ PIX Enviado</span>
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(78,207,160,.08);border:1px solid rgba(78,207,160,.2);border-radius:10px;cursor:pointer;">
+          <input type="radio" name="pixTipo" value="recebido" id="pixTipoRecebido" style="width:auto;accent-color:var(--success);">
+          <span style="font-size:13px;font-weight:600;color:var(--success);">↓ PIX Recebido</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label>Descrição / Quem</label><input type="text" id="pixDesc" placeholder="Ex: João, Mercado, Aluguel..."></div>
+    <div class="form-group" style="margin-bottom:12px;"><label>Valor (R$)</label><input type="number" id="pixValor" placeholder="0,00" step="0.01" min="0"></div>
+    <div class="form-group" style="margin-bottom:12px;"><label>Data</label><input type="text" id="pixData" placeholder="dd/mm/aaaa" maxlength="10" oninput="maskDate(this)"></div>
+    <input type="hidden" id="pixEditId">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePixModal()">Cancelar</button>
+      <button class="btn btn-primary ripple-host" onclick="savePix();addRipple(event)">💾 Salvar PIX</button>
+    </div>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
   <button class="lightbox-download" onclick="event.stopPropagation();downloadLightboxImage()">⬇ Baixar</button>
@@ -1260,7 +1311,7 @@ const DEFAULT_STATE={
   casal:{nome1:'Felipe',nome2:'Ana'},
   pessoas:{a:{entradas:[]},b:{entradas:[]}},
   fixas:[],expenses:[],cartoes:[],contas:[],
-  expenseNotes:{},customCats:[],
+expenseNotes:{},customCats:[],pixTransactions:[],
   activeFilter:'all',selectedCardId:null,selectedCardColor:0
 };
 
@@ -1270,7 +1321,7 @@ function sanitizeState(s){
     casal:s.casal||DEFAULT_STATE.casal,
     pessoas:{a:{entradas:(s.pessoas?.a?.entradas)||[]},b:{entradas:(s.pessoas?.b?.entradas)||[]}},
     fixas:s.fixas||[],expenses:s.expenses||[],cartoes:s.cartoes||[],contas:s.contas||[],
-    expenseNotes:s.expenseNotes||{},customCats:s.customCats||[],
+    expenseNotes:s.expenseNotes||{},customCats:s.customCats||[],pixTransactions:s.pixTransactions||[],
     activeFilter:s.activeFilter||'all',
     selectedCardId:s.selectedCardId||null,selectedCardColor:s.selectedCardColor||0
   };
@@ -1846,6 +1897,22 @@ function renderContasTab(){
   let html='';
   state.contas.forEach((c,i)=>{
     const color=CONTA_COLORS[i%CONTA_COLORS.length];
+const pixs=pixDoConta(c.id);
+    const pixEnv=pixs.filter(p=>p.type==='enviado').reduce((s,p)=>s+p.value,0);
+    const pixRec=pixs.filter(p=>p.type==='recebido').reduce((s,p)=>s+p.value,0);
+    const pixRecent=[...pixs].sort((a,b)=>b.id.localeCompare(a.id)).slice(0,5);
+    const pixHtml=pixs.length?`<div class="pix-list">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <span>💸 PIX</span>
+        <button class="btn btn-info btn-sm" onclick="openPixModal('${c.id}')" style="font-size:10px;padding:3px 8px;min-height:24px;">＋ Novo</button>
+      </div>
+      <div class="pix-summary">
+        <div class="pix-sum-box"><div class="pix-sum-label">Enviado</div><div class="pix-sum-value" style="color:var(--danger)">−${fmt(pixEnv)}</div></div>
+        <div class="pix-sum-box"><div class="pix-sum-label">Recebido</div><div class="pix-sum-value" style="color:var(--success)">+${fmt(pixRec)}</div></div>
+        <div class="pix-sum-box"><div class="pix-sum-label">Líquido</div><div class="pix-sum-value" style="color:${pixRec-pixEnv>=0?'var(--success)':'var(--danger)'}">${pixRec-pixEnv>=0?'+':''}${fmt(pixRec-pixEnv)}</div></div>
+      </div>
+      <div class="pix-history-wrap">${pixRecent.map(p=>`<div class="pix-item"><div class="pix-icon ${p.type}">${p.type==='enviado'?'↑':'↓'}</div><div style="flex:1;min-width:0;"><div class="pix-desc">${p.desc}</div><div class="pix-date">${p.date}</div></div><div class="pix-value ${p.type}">${p.type==='enviado'?'−':'+'}${fmt(p.value)}</div><button class="btn btn-danger btn-sm" onclick="deletePix('${p.id}')" style="padding:3px 6px;min-height:24px;font-size:11px;">✕</button></div>`).join('')}</div>
+    </div>`:'';
     html+=`<div class="bank-account-card" style="border-top:2px solid ${color}">
       <div class="ba-bank">${c.banco||'Banco'}</div>
       <div class="ba-name">${c.nome}</div>
@@ -1853,9 +1920,11 @@ function renderContasTab(){
       <div class="ba-type">${TIPO_CONTA[c.tipo]||c.tipo}</div>
       <div class="ba-actions">
         <button class="btn btn-success btn-sm ripple-host" onclick="openSaldoModal('${c.id}');addRipple(event)">💰 Saldo</button>
+        <button class="btn btn-info btn-sm" onclick="openPixModal('${c.id}')">💸 PIX</button>
         <button class="btn btn-secondary btn-sm" onclick="openContaModal('${c.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteConta('${c.id}')">🗑</button>
       </div>
+      ${pixHtml}
     </div>`;
   });
   html+=`<div class="bank-account-card" style="border:2px dashed rgba(255,255,255,0.1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:140px;background:none;color:var(--muted);" onclick="openContaModal()">
@@ -2135,7 +2204,63 @@ function renderInstallments(){
     </div>`;
   }).join('');
 }
+/* ── PIX ── */
+function openPixModal(contaId,editId){
+  contaId=contaId||null;editId=editId||null;
+  if(!state.contas.length){showToast('Cadastre uma conta bancária primeiro.','error');return;}
+  document.getElementById('pixModalTitle').textContent=editId?'✏️ Editar PIX':'💸 Lançar PIX';
+  document.getElementById('pixEditId').value=editId||'';
+  const sel=document.getElementById('pixContaId');
+  sel.innerHTML=state.contas.map(c=>`<option value="${c.id}" ${c.id===contaId?'selected':''}>${c.nome} — ${c.banco}</option>`).join('');
+  if(editId){
+    const p=(state.pixTransactions||[]).find(x=>x.id===editId);
+    if(p){sel.value=p.contaId;document.getElementById(p.type==='enviado'?'pixTipoEnviado':'pixTipoRecebido').checked=true;document.getElementById('pixDesc').value=p.desc;document.getElementById('pixValor').value=p.value;document.getElementById('pixData').value=p.date;}
+  }else{
+    document.getElementById('pixTipoEnviado').checked=true;
+    document.getElementById('pixDesc').value='';
+    document.getElementById('pixValor').value='';
+    document.getElementById('pixData').value=today();
+  }
+  document.getElementById('pixModal').classList.add('open');
+}
+function closePixModal(){document.getElementById('pixModal').classList.remove('open');}
 
+function savePix(){
+  const contaId=document.getElementById('pixContaId').value;
+  const type=document.querySelector('input[name="pixTipo"]:checked').value;
+  const desc=document.getElementById('pixDesc').value.trim();
+  const value=parseFloat(document.getElementById('pixValor').value);
+  const date=document.getElementById('pixData').value||today();
+  const editId=document.getElementById('pixEditId').value;
+  if(!desc){showToast('Informe a descrição.','error');return;}
+  if(isNaN(value)||value<=0){showToast('Valor inválido.','error');return;}
+  if(!state.pixTransactions)state.pixTransactions=[];
+  const contaIdx=state.contas.findIndex(x=>x.id===contaId);
+  if(contaIdx<0){showToast('Conta não encontrada.','error');return;}
+  if(editId){
+    const old=state.pixTransactions.find(x=>x.id===editId);
+    if(old){
+      const oi=state.contas.findIndex(x=>x.id===old.contaId);
+      if(oi>=0){if(old.type==='enviado')state.contas[oi].saldo=(state.contas[oi].saldo||0)+old.value;else state.contas[oi].saldo=(state.contas[oi].saldo||0)-old.value;}
+    }
+    state.pixTransactions=state.pixTransactions.filter(x=>x.id!==editId);
+  }
+  if(type==='enviado')state.contas[contaIdx].saldo=(state.contas[contaIdx].saldo||0)-value;
+  else state.contas[contaIdx].saldo=(state.contas[contaIdx].saldo||0)+value;
+  state.pixTransactions.push({id:'pix_'+Date.now(),contaId,type,desc,value,date});
+  saveState();closePixModal();renderAll();
+  showToast(`PIX ${type==='enviado'?'enviado ↑':'recebido ↓'} registrado! ✓`,'success');
+}
+
+function deletePix(id){
+  const p=(state.pixTransactions||[]).find(x=>x.id===id);
+  if(!p||!confirm(`Remover PIX "${p.desc}" — ${fmt(p.value)}?`))return;
+  const ci=state.contas.findIndex(x=>x.id===p.contaId);
+  if(ci>=0){if(p.type==='enviado')state.contas[ci].saldo=(state.contas[ci].saldo||0)+p.value;else state.contas[ci].saldo=(state.contas[ci].saldo||0)-p.value;}
+  state.pixTransactions=state.pixTransactions.filter(x=>x.id!==id);
+  saveState();renderAll();showToast('PIX removido.');
+}
+function pixDoConta(contaId){return(state.pixTransactions||[]).filter(p=>p.contaId===contaId);}
 /* ── DASHBOARD ── */
 function renderSummary(){
   const n1=state.casal.nome1||'Você',n2=state.casal.nome2||'Cônjuge';
