@@ -291,6 +291,9 @@ select option{background:var(--surface2);}
 .expense-table tr:last-child td{border-bottom:none;}
 .expense-table tbody tr{transition:background .15s;}
 .expense-table tbody tr:hover td{background:rgba(255,255,255,0.02);}
+.expense-table th.sortable{cursor:pointer;user-select:none;transition:color .15s;}
+.expense-table th.sortable:hover{color:var(--text2);}
+.th-sort-icon{color:var(--accent);margin-left:2px;opacity:.9;font-size:11px;}
 
 /* Row states */
 .expense-row-clickable{cursor:pointer;}
@@ -692,7 +695,7 @@ hr.divider{border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0
   .income-grid{grid-template-columns:1fr 1fr;}
   .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
   .bank-accounts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));}
-  .variaveis-layout{grid-template-columns:340px 1fr;}
+  .variaveis-layout{grid-template-columns:340px 1fr;align-items:start;}
   .toast{left:unset;right:24px;bottom:24px;width:auto;max-width:340px;}
   .modal-backdrop{align-items:center;}
   .modal{border-radius:20px;padding:28px;width:500px;max-width:94vw;}
@@ -917,14 +920,16 @@ hr.divider{border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0
         <div class="dot" style="background:var(--danger)"></div>
         Despesas do Mês
         <span id="expenseCount" class="badge" style="background:rgba(224,85,85,.15);color:var(--danger);">0</span>
+        <button class="btn btn-secondary btn-sm" onclick="toggleExpSort()" id="expSortBtn" style="margin-left:auto;font-size:11px;min-height:28px;gap:5px;">📅 <span id="expSortLabel">Mais recente</span></button>
       </div>
       <div class="chip-row" id="catFilter"></div>
       <div class="table-wrap">
         <table class="expense-table" id="expenseTable">
-          <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Tipo</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+          <thead><tr><th class="sortable" onclick="toggleExpSort()">Data<span id="expSortIcon" class="th-sort-icon">↓</span></th><th>Descrição</th><th>Categoria</th><th>Cartão</th><th>Tipo</th><th style="text-align:right">Valor</th><th></th></tr></thead>
           <tbody id="expenseTableBody"></tbody>
         </table>
       </div>
+      <div id="catTotalsBottom"></div>
     </div>
   </div>
 </div>
@@ -1271,6 +1276,21 @@ function maskDate(input){
   input.value=v.slice(0,10);
 }
 
+/* Converte dd/mm/yyyy → yyyymmdd para comparação correta entre meses */
+function parseDateForSort(d){
+  if(!d)return'00000000';
+  const p=d.split('/');
+  return p.length===3?p[2]+p[1]+p[0]:d.replace(/\D/g,'');
+}
+function toggleExpSort(){
+  expSortAsc=!expSortAsc;
+  const lbl=document.getElementById('expSortLabel');
+  const icon=document.getElementById('expSortIcon');
+  if(lbl)lbl.textContent=expSortAsc?'Mais antigo':'Mais recente';
+  if(icon)icon.textContent=expSortAsc?'↑':'↓';
+  renderExpensesTab();
+}
+
 /* ── DEFAULT CATEGORIES (never deletable) ── */
 const DEFAULT_CATS=[
   {id:'alimentacao', label:'Alimentação', emoji:'🍽️', color:'#d4a45b', isDefault:true},
@@ -1290,6 +1310,7 @@ const EMOJI_PICKS=['🍔','🛒','🚗','🏥','💊','🐾','🐕','🎮','🎬
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 let currentMonth=new Date().getMonth(), currentYear=new Date().getFullYear();
 let installSortDesc=true;
+let expSortAsc=false;
 let _donutChart=null;
 let currentDetailGroupId=null;
 let selectedCatColor=CAT_COLORS[0];
@@ -2079,6 +2100,36 @@ function renderCatSummary(){
   }).join('');
 }
 
+function renderCatTotalsBottom(expenses){
+  const el=document.getElementById('catTotalsBottom');if(!el)return;
+  if(!expenses.length){el.innerHTML='';return;}
+  const byCat={};
+  expenses.forEach(e=>{byCat[e.cat]=(byCat[e.cat]||0)+(e.value||0);});
+  const total=Object.values(byCat).reduce((s,v)=>s+v,0);
+  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML=`
+    <hr class="divider">
+    <div class="section-label"><span>💰 Total por Categoria — ${monthLabel()}</span></div>
+    <div class="cat-summary-grid" style="margin-bottom:14px;">
+      ${sorted.map(([cat,val])=>{
+        const ci=getCat(cat),pct=total>0?Math.round(val/total*100):0;
+        return`<div class="cat-sum-card">
+          <div class="cat-sum-icon">${ci.emoji}</div>
+          <div class="cat-sum-info">
+            <div class="cat-sum-name">${ci.label}</div>
+            <div class="cat-sum-value" style="color:${ci.color};">${fmt(val)}</div>
+            <div class="cat-sum-pct">${pct}% do total</div>
+            <div class="cat-sum-bar"><div class="cat-sum-bar-fill" style="background:${ci.color};width:${pct}%"></div></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:rgba(224,85,85,0.06);border:1px solid rgba(224,85,85,0.14);border-radius:var(--radius-sm);">
+      <span style="color:var(--muted);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;">Total Variáveis — ${monthLabel()}</span>
+      <span style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--danger);">${fmt(total)}</span>
+    </div>`;
+}
+
 function renderExpensesTab(){
   buildCatSelect('expCat',editingExpenseGroupId?state.expenses.find(e=>e.groupId===editingExpenseGroupId)?.cat||'outros':'');
   populateCartaoSelect('expCartao');
@@ -2093,9 +2144,13 @@ function renderExpensesTab(){
   const tbody=document.getElementById('expenseTableBody');if(!tbody)return;
   if(!filtered.length){
     tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🧾</div><p>Nenhuma despesa neste mês</p></div></td></tr>`;
+    renderCatTotalsBottom(all);
     return;
   }
-  tbody.innerHTML=filtered.sort((a,b)=>a.date<b.date?1:-1).map(e=>{
+  const sortFn=(a,b)=>expSortAsc
+    ?parseDateForSort(a.date).localeCompare(parseDateForSort(b.date))
+    :parseDateForSort(b.date).localeCompare(parseDateForSort(a.date));
+  tbody.innerHTML=filtered.sort(sortFn).map(e=>{
     const ci=getCat(e.cat),card=e.cardId?state.cartoes.find(c=>c.id===e.cardId):null;
     const cardTag=card?`<span class="card-tag" style="background:rgba(91,143,212,.1);color:var(--info);">💳 ${card.name}</span>`:`<span style="color:var(--muted);font-size:11px">débito</span>`;
     const hn=hasNoteData(e.groupId);
@@ -2112,6 +2167,7 @@ function renderExpensesTab(){
       </td>
     </tr>`;
   }).join('');
+  renderCatTotalsBottom(all);
 }
 function setFilter(cat){state.activeFilter=cat;renderExpensesTab();}
 
