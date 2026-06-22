@@ -1137,6 +1137,7 @@ hr.divider{border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0
     <div class="form-group" style="margin-bottom:12px;"><label>Nome do Cartão</label><input type="text" id="cardName" placeholder="Ex: Nubank, Inter Gold..."></div>
     <div class="form-group" style="margin-bottom:12px;"><label>Banco / Emissor</label><input type="text" id="cardBank" placeholder="Ex: Nubank, Inter, Bradesco..."></div>
     <div class="form-group" style="margin-bottom:12px;"><label>Limite Total (R$) — 0 para não controlar</label><input type="number" id="cardLimit" placeholder="0,00" step="0.01" min="0"></div>
+    <div class="form-group" style="margin-bottom:12px;"><label>Dia de Fechamento — compras nesse dia vão pro próximo mês</label><input type="number" id="cardClosingDay" placeholder="Ex: 28" min="1" max="31"></div>
     <div class="form-group" style="margin-bottom:12px;">
       <label>Cor do Cartão</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="colorPicker">
@@ -1757,8 +1758,8 @@ function openCardModal(editId=null){
   document.getElementById('cardEditId').value=editId||'';
   if(editId){
     const c=state.cartoes.find(x=>x.id===editId);
-    if(c){document.getElementById('cardName').value=c.name;document.getElementById('cardBank').value=c.bank;document.getElementById('cardLimit').value=c.limit||'';selectedCardColor=c.colorIdx||0;selectCardColor(selectedCardColor);}
-  }else{document.getElementById('cardName').value='';document.getElementById('cardBank').value='';document.getElementById('cardLimit').value='';selectedCardColor=0;selectCardColor(0);}
+    if(c){document.getElementById('cardName').value=c.name;document.getElementById('cardBank').value=c.bank;document.getElementById('cardLimit').value=c.limit||'';document.getElementById('cardClosingDay').value=c.closingDay||'';selectedCardColor=c.colorIdx||0;selectCardColor(selectedCardColor);}
+  }else{document.getElementById('cardName').value='';document.getElementById('cardBank').value='';document.getElementById('cardLimit').value='';document.getElementById('cardClosingDay').value='';selectedCardColor=0;selectCardColor(0);}
   document.getElementById('cardModal').classList.add('open');
 }
 function closeCardModal(){document.getElementById('cardModal').classList.remove('open');}
@@ -1766,10 +1767,11 @@ function saveCard(){
   const name=document.getElementById('cardName').value.trim();
   const bank=document.getElementById('cardBank').value.trim();
   const limit=parseFloat(document.getElementById('cardLimit').value)||0;
+  const closingDay=parseInt(document.getElementById('cardClosingDay').value)||0;
   const editId=document.getElementById('cardEditId').value;
   if(!name){showToast('Informe o nome do cartão.','error');return;}
-  if(editId){const idx=state.cartoes.findIndex(x=>x.id===editId);if(idx>=0)state.cartoes[idx]={...state.cartoes[idx],name,bank,limit,colorIdx:selectedCardColor};}
-  else state.cartoes.push({id:'card_'+Date.now(),name,bank,limit,colorIdx:selectedCardColor});
+  if(editId){const idx=state.cartoes.findIndex(x=>x.id===editId);if(idx>=0)state.cartoes[idx]={...state.cartoes[idx],name,bank,limit,closingDay,colorIdx:selectedCardColor};}
+  else state.cartoes.push({id:'card_'+Date.now(),name,bank,limit,closingDay,colorIdx:selectedCardColor});
   saveState();closeCardModal();renderAll();showToast('Cartão salvo! ✓');
 }
 function deleteCard(id){
@@ -1800,6 +1802,7 @@ function renderCardsTab(){
             <div class="cc-label">Usado em ${monthLabel()}</div>
             <div class="cc-value">${fmt(used)}</div>
             ${c.limit>0?`<div class="cc-sublabel">de ${fmt(c.limit)} (${pct}%)</div>`:'<div class="cc-sublabel">Sem limite cadastrado</div>'}
+            ${c.closingDay?`<div class="cc-sublabel" style="margin-top:4px;opacity:.75">✂ Fecha dia ${c.closingDay}</div>`:''}
           </div>
         </div>
         ${c.limit>0?`<div class="progress-bar"><div class="progress-fill" style="background:${pctColor};width:${pct}%"></div></div>`:''}
@@ -2054,8 +2057,19 @@ function addExpense(data=null){
   if(editingExpenseGroupId&&!data)state.expenses=state.expenses.filter(e=>e.groupId!==editingExpenseGroupId);
   const parcelValue=value/parcelas;
   const groupId=(editingExpenseGroupId&&!data)?editingExpenseGroupId:Date.now()+'_'+Math.random().toString(36).slice(2);
+  let startMonth=currentMonth,startYear=currentYear;
+  if(cardId){
+    const usedCard=state.cartoes.find(c=>c.id===cardId);
+    if(usedCard&&usedCard.closingDay){
+      const dp=dateStr.split('/');
+      if(dp.length===3){
+        const purchaseDay=parseInt(dp[0]);
+        if(purchaseDay>=usedCard.closingDay){startMonth++;if(startMonth>11){startMonth=0;startYear++;}}
+      }
+    }
+  }
   for(let i=1;i<=parcelas;i++){
-    let fm=currentMonth+(i-1),fy=currentYear;
+    let fm=startMonth+(i-1),fy=startYear;
     while(fm>11){fm-=12;fy++;}
     state.expenses.push({id:groupId+'_'+i,groupId,desc,value:parcelValue,totalValue:value,cat,parcelas,parcelaAtual:i,date:dateStr,monthYear:monthKey(fm,fy),cardId});
   }
@@ -2303,7 +2317,9 @@ function savePix(){
   }
   if(type==='enviado')state.contas[contaIdx].saldo=(state.contas[contaIdx].saldo||0)-value;
   else state.contas[contaIdx].saldo=(state.contas[contaIdx].saldo||0)+value;
-  state.pixTransactions.push({id:'pix_'+Date.now(),contaId,type,desc,value,date});
+  let pixMonthYear=monthKey();
+  if(date){const pp=date.split('/');if(pp.length===3){const pm=parseInt(pp[1])-1,py=parseInt(pp[2]);if(!isNaN(pm)&&!isNaN(py))pixMonthYear=monthKey(pm,py);}}
+  state.pixTransactions.push({id:'pix_'+Date.now(),contaId,type,desc,value,date,monthYear:pixMonthYear});
   saveState();closePixModal();renderAll();
   showToast(`PIX ${type==='enviado'?'enviado ↑':'recebido ↓'} registrado! ✓`,'success');
 }
@@ -2316,7 +2332,7 @@ function deletePix(id){
   state.pixTransactions=state.pixTransactions.filter(x=>x.id!==id);
   saveState();renderAll();showToast('PIX removido.');
 }
-function pixDoConta(contaId){return(state.pixTransactions||[]).filter(p=>p.contaId===contaId);}
+function pixDoConta(contaId){const mk=monthKey();return(state.pixTransactions||[]).filter(p=>p.contaId===contaId&&(p.monthYear===mk||!p.monthYear));}
 /* ── DASHBOARD ── */
 function renderSummary(){
   const n1=state.casal.nome1||'Você',n2=state.casal.nome2||'Cônjuge';
